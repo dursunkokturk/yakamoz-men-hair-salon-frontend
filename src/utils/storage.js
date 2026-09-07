@@ -24,10 +24,12 @@ export const STORAGE_KEYS = {
   SERVICES: "yakamoz_services",
   BLOCKED_CUSTOMERS: "yakamoz_blocked_customers",
   AUTH_TOKEN: "yakamoz_auth_token",
-  ADMIN_CREDENTIALS: "yakamoz_admin_credentials",
-  SETTINGS: "yakamoz_settings_v2", // v2: closedWeekday varsayılanındaki hata (2=Çarşamba) düzeltildi
+  USERS: "yakamoz_users", // Admin + Personel hesapları (role: "admin" | "staff")
+  USERS_LEGACY_CREDENTIALS: "yakamoz_admin_credentials", // v1 tekli admin kaydı — yalnızca migration için okunur  SETTINGS: "yakamoz_settings_v2", // v2: closedWeekday varsayılanındaki hata (2=Çarşamba) düzeltildi
   SETTINGS_LEGACY: "yakamoz_settings", // v1 anahtarı — sadece göç (migration) için okunur
   CLOSED_DAYS: "yakamoz_closed_days",
   THEME: "yakamoz_theme",
   ADMIN_FILTERS: "yakamoz_admin_filters",
+  NOTIFICATIONS: "yakamoz_notifications", // Personel Onay Bildirimleri
+  ACTION_LOGS: "yakamoz_action_logs",     // audit log (kim, ne zaman, ne yaptı)
 };
