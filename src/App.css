@@ -1419,6 +1419,16 @@ button {
   opacity: 0.55;
 }
 
+/* ============ BİLDİRİM / AUDIT LOG (yeni panellerin ortak kullandığı küçük ek stiller) ============ */
+.admin-blocked__item {
+  cursor: default;
+}
+
+.admin-blocked__item[onclick],
+.admin-blocked__item:has(.ui-badge--pending) {
+  cursor: pointer;
+}
+
 .service-form__toggle {
   display: flex;
   align-items: center;
