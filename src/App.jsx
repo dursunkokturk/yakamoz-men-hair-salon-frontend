@@ -7,6 +7,8 @@ import { AuthProvider } from "./context/AuthContext";
 import { ServiceProvider } from "./context/ServiceContext";
 import { BlockedCustomerProvider } from "./context/BlockedCustomerContext";
 import { AppointmentProvider } from "./context/AppointmentContext";
+import { AuditLogProvider } from "./context/AuditLogContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
@@ -19,6 +21,7 @@ import { MyAppointments } from "./components/pages/MyAppointments";
 import { AdminPanel } from "./components/pages/AdminPanel";
 import { Login } from "./components/pages/Login";
 import { NotFound } from "./components/pages/NotFound";
+import { StaffPanel } from "./components/pages/StaffPanel";
 
 import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
@@ -28,41 +31,53 @@ function App() {
   return (
     <ThemeProvider>
       <SettingsProvider>
-        <AuthProvider>
-          <ServiceProvider>
-            <BlockedCustomerProvider>
-              <ClosedDayProvider>
-                <AppointmentProvider>
-                  <BrowserRouter>
-                    <div className="app-shell">
-                      <Header />
-                      <main className="app-main">
-                        <Routes>
-                          <Route path="/" element={<Home />} />
-                          <Route path="/hizmetler" element={<Services />} />
-                          <Route path="/randevu-al" element={<BookAppointment />} />
-                          <Route path="/randevularim" element={<MyAppointments />} />
-                          <Route path="/giris" element={<Login />} />
-                          <Route
-                            path="/admin"
-                            element={
-                              <ProtectedRoute>
-                                <AdminPanel />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </main>
-                      <Footer />
-                    </div>
-                    <ToastContainer position="top-center" autoClose={3500} theme="dark" />
-                  </BrowserRouter>
-                </AppointmentProvider>
-              </ClosedDayProvider>
-            </BlockedCustomerProvider>
-          </ServiceProvider>
-        </AuthProvider>
+        <AuditLogProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              <ServiceProvider>
+                <BlockedCustomerProvider>
+                  <ClosedDayProvider>
+                    <AppointmentProvider>
+                      <BrowserRouter>
+                        <div className="app-shell">
+                          <Header />
+                          <main className="app-main">
+                            <Routes>
+                              <Route path="/" element={<Home />} />
+                              <Route path="/hizmetler" element={<Services />} />
+                              <Route path="/randevu-al" element={<BookAppointment />} />
+                              <Route path="/randevularim" element={<MyAppointments />} />
+                              <Route path="/giris" element={<Login />} />
+                              <Route
+                                path="/staff"
+                                element={
+                                  <ProtectedRoute allowedRoles={["staff"]}>
+                                    <StaffPanel />
+                                  </ProtectedRoute>
+                                }
+                              />
+                              <Route
+                                path="/admin"
+                                element={
+                                  <ProtectedRoute allowedRoles={["admin"]}>
+                                    <AdminPanel />
+                                  </ProtectedRoute>
+                                }
+                              />
+                              <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </main>
+                          <Footer />
+                        </div>
+                        <ToastContainer position="top-center" autoClose={3500} theme="dark" />
+                      </BrowserRouter>
+                    </AppointmentProvider>
+                  </ClosedDayProvider>
+                </BlockedCustomerProvider>
+              </ServiceProvider>
+            </AuthProvider>
+          </NotificationProvider>
+        </AuditLogProvider>
       </SettingsProvider>
     </ThemeProvider>
   );
