@@ -1,10 +1,16 @@
+// Ust Bilgi Yazilari
+// Onay Suresi Takibi
+// Yeni Sekmeler
+
 import { useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { LogOut, ChevronLeft, ChevronRight, Check, CheckCheck, Ban, Trash2, CalendarClock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useAppointments, APPOINTMENT_STATUS } from "../../context/AppointmentContext";
+import { useAppointments, APPOINTMENT_STATUS, STAFF_APPROVAL_STATUS } from "../../context/AppointmentContext";
 import { useBlockedCustomers } from "../../context/BlockedCustomerContext";
 import { useAvailability } from "../../hooks/useAvailability";
+import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
+import { useNotifications } from "../../context/NotificationContext";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { Badge } from "../ui/Badge";
@@ -12,27 +18,40 @@ import { ServiceManagerList } from "../services/ServiceManagerList";
 import { ClosedDaysManager } from "../admin/ClosedDaysManager";
 import { PasswordSettings } from "../admin/PasswordSettings";
 import { BusinessHoursSettings } from "../admin/BusinessHoursSettings";
+import { ApprovalSettings } from "../admin/ApprovalSettings";
+import { StaffManager } from "../admin/StaffManager";
+import { NotificationsPanel } from "../admin/NotificationsPanel";
+import { AuditLogPanel } from "../admin/AuditLogPanel";
 import { dayjs, formatDateShort, formatDateTR, todayISO } from "../../utils/dateUtils";
 import { AppointmentFilters } from "../admin/AppointmentFilters";
+import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
 
 const TABS = [
   { id: "appointments", label: "Randevular" },
   { id: "blocked", label: "Engellenen Müşteriler" },
   { id: "services", label: "Hizmetler" },
   { id: "closedDays", label: "Kapalı Günler" },
+  { id: "staff", label: "Personel Yönetimi" },
+  { id: "notifications", label: "Bildirimler" },
+  { id: "auditLog", label: "İşlem Kayıtları" },
   { id: "settings", label: "Ayarlar" },
 ];
 
 export function AdminPanel() {
-  const { logout, adminUsername } = useAuth();
+  const { logout, currentUser } = useAuth();
+  const { unreadCount } = useNotifications();
   const [activeTab, setActiveTab] = useState("appointments");
+
+  // Panel açık olduğu sürece 5 dakikada bir + panel her açıldığında (mount) bir kez
+  // süresi geçen personel onaylarını tarar ve Admin'e bildirim düşürür.
+  useApprovalWatcher();
 
   return (
     <div className="page page--admin">
       <div className="admin-topbar">
         <div>
           <h1>Berber Paneli</h1>
-          <p>Hoş geldin, {adminUsername}</p>
+          <p>Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
         </div>
         <Button variant="ghost" onClick={logout}>
           <LogOut size={16} /> Çıkış Yap
@@ -48,6 +67,9 @@ export function AdminPanel() {
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
+            {tab.id === "notifications" && unreadCount > 0 && (
+              <span className="ui-badge ui-badge--pending admin-tabs__count">{unreadCount}</span>
+            )}
           </button>
         ))}
       </div>
@@ -56,9 +78,13 @@ export function AdminPanel() {
       {activeTab === "blocked" && <BlockedCustomersTab />}
       {activeTab === "services" && <ServiceManagerList />}
       {activeTab === "closedDays" && <ClosedDaysManager />}
+      {activeTab === "staff" && <StaffManager />}
+      {activeTab === "notifications" && <NotificationsPanel />}
+      {activeTab === "auditLog" && <AuditLogPanel />}
       {activeTab === "settings" && (
         <>
           <BusinessHoursSettings />
+          <ApprovalSettings />
           <PasswordSettings />
         </>
       )

@@ -1181,6 +1181,12 @@ button {
   border-bottom-color: var(--color-accent);
 }
 
+.admin-tabs__count {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+}
+
 .admin-date-nav {
   display: flex;
   align-items: center;
@@ -1417,6 +1423,16 @@ button {
 
 .service-manager__item--inactive {
   opacity: 0.55;
+}
+
+/* ============ BİLDİRİM / AUDIT LOG (yeni panellerin ortak kullandığı küçük ek stiller) ============ */
+.admin-blocked__item {
+  cursor: default;
+}
+
+.admin-blocked__item[onclick],
+.admin-blocked__item:has(.ui-badge--pending) {
+  cursor: pointer;
 }
 
 .service-form__toggle {

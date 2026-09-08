@@ -1,3 +1,5 @@
+// Giris Yapan Kullaniciya Gore Yapilacak Islemlerin Gosterilmesi
+
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -18,9 +20,9 @@ export function Login() {
 
   function onSubmit(values) {
     try {
-      login(values.username.trim(), values.password);
+      const user = login(values.username.trim(), values.password);
       toast.success("Hoş geldiniz");
-      navigate("/admin");
+      navigate(user.role === "staff" ? "/staff" : "/admin");
     } catch {
       setError("root", { message: "Kullanıcı adı veya şifre hatalı" });
     }
@@ -32,8 +34,8 @@ export function Login() {
         <div className="login-form__icon">
           <LogIn size={28} />
         </div>
-        <h1>Berber Paneli Girişi</h1>
-        <p>Randevuları yönetmek için giriş yapın.</p>
+        <h1>Berber / Personel Girişi</h1>
+        <p>Randevuları yönetmek veya işlemleri onaylamak için giriş yapın.</p>
 
         <Input
           label="Kullanıcı adı"
