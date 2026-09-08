@@ -15,7 +15,8 @@ export const WORK_START_HOUR = 9;
 export const WORK_END_HOUR = 19;
 export const CLOSED_WEEKDAY = 1; // dayjs.weekday() — tr locale'de hafta Pazartesi (0) ile başlar, Salı = 1
 export const SLOT_INTERVAL_MINUTES = 30;
-export const MAX_APPOINTMENTS_PER_SLOT = 2;
+export const DEFAULT_MAX_APPOINTMENTS_PER_SLOT = 1; // Normal günlerde 1 kişi
+export const BAYRAM_MAX_APPOINTMENTS_PER_SLOT = 2;   // Kurban/Ramazan istisnası, azami 2
 
 // dayjs.weekday(): tr locale'de hafta Pazartesi (0) ile başlar
 export const WEEKDAY_LABELS = [
