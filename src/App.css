@@ -1181,6 +1181,12 @@ button {
   border-bottom-color: var(--color-accent);
 }
 
+.admin-tabs__count {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+}
+
 .admin-date-nav {
   display: flex;
   align-items: center;
