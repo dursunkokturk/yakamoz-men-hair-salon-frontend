@@ -3,7 +3,6 @@ import { useAppointments } from "../context/AppointmentContext";
 import { useClosedDays } from "../context/ClosedDayContext";
 import { useSettings } from "../context/SettingsContext";
 import { getDateClosureInfo } from "../utils/scheduling";
-import { useAppointments } from "../context/AppointmentContext";
 
 /**
  * Verilen tarih için tüm saat dilimlerini, her birinin dolu/boş durumuyla birlikte döner.
