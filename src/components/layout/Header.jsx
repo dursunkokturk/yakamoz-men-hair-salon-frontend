@@ -1,3 +1,6 @@
+// Login Isleminde Giris Yapilan Kullaniciya Gore 
+// Hangi Sayfalarin Gosterilecegini Belirleme
+
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Menu, X, Sun, Moon } from "lucide-react";
@@ -14,7 +17,7 @@ const NAV_LINKS = [
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
   function closeMenu() {
@@ -50,11 +53,11 @@ export function Header() {
             </NavLink>
           ))}
           <NavLink
-            to={isAuthenticated ? "/admin" : "/giris"}
+            to={isAuthenticated ? (role === "staff" ? "/staff" : "/admin") : "/giris"}
             className={({ isActive }) => `site-header__link site-header__link--admin ${isActive ? "is-active" : ""}`}
             onClick={closeMenu}
           >
-            {isAuthenticated ? "Berber Paneli" : "Admin Girişi"}
+            {isAuthenticated ? (role === "staff" ? "Personel Paneli" : "Berber Paneli") : "Giriş"}
           </NavLink>
         </nav>
 
