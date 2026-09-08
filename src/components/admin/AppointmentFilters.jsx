@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { useServices } from "../../context/ServiceContext";
 import { APPOINTMENT_STATUS } from "../../context/AppointmentContext";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../../utils/storage";
+import { STORAGE_KEYS } from "../../utils/storage";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { useDebounce } from "../../hooks/useDebounce";
 
 const STATUS_OPTIONS = [
@@ -21,13 +22,10 @@ const DEFAULT_FILTERS = { status: "all", serviceId: "all", customerName: "" };
  */
 export function AppointmentFilters({ onChange }) {
   const { services } = useServices();
-  const [filters, setFilters] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.ADMIN_FILTERS, DEFAULT_FILTERS)
-  );
+  const [filters, setFilters] = useLocalStorage(STORAGE_KEYS.ADMIN_FILTERS, DEFAULT_FILTERS);
   const debouncedName = useDebounce(filters.customerName, 300);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.ADMIN_FILTERS, filters);
     onChange({ ...filters, customerName: debouncedName });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.status, filters.serviceId, debouncedName]);
