@@ -24,7 +24,6 @@ import { NotificationsPanel } from "../admin/NotificationsPanel";
 import { AuditLogPanel } from "../admin/AuditLogPanel";
 import { dayjs, formatDateShort, formatDateTR, todayISO } from "../../utils/dateUtils";
 import { AppointmentFilters } from "../admin/AppointmentFilters";
-import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
 
 const TABS = [
   { id: "appointments", label: "Randevular" },
