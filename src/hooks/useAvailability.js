@@ -3,6 +3,7 @@ import { useAppointments } from "../context/AppointmentContext";
 import { useClosedDays } from "../context/ClosedDayContext";
 import { useSettings } from "../context/SettingsContext";
 import { getDateClosureInfo } from "../utils/scheduling";
+import { generateTimeSlots, isPastDateTime } from "../utils/dateUtils";
 
 /**
  * Verilen tarih için tüm saat dilimlerini, her birinin dolu/boş durumuyla birlikte döner.
@@ -24,9 +25,9 @@ export function useAvailability(dateISO) {
       return { isOpen: false, slots: [], closedReason: reason };
     }
 
+    const capacity = getSlotCapacity();
     const slots = generateTimeSlots().map((time) => {
       const takenCount = countActiveAppointmentsAt(dateISO, time);
-      const capacity = getSlotCapacity();
       const isPast = isPastDateTime(dateISO, time);
       return {
         time,
