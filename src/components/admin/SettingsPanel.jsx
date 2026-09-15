@@ -13,7 +13,7 @@ const SETTINGS_TABS = [
 ];
 
 export function SettingsPanel() {
-  const [activeSubTab, setActiveSubTab] = useState("business");
+  const [activeSubTab, setActiveSubTab] = useState("approval");
 
   return (
     <div className="settings-panel">
