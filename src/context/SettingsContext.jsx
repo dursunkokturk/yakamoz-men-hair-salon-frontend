@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { useAuditLog } from "./AuditLogContext";
 
 const SettingsContext = createContext(null);
 
@@ -42,6 +43,8 @@ function migrateLegacySettings() {
 }
 
 export function SettingsProvider({ children }) {
+  const { logAction } = useAuditLog();
+
   const [settings, setSettings] = useState(() => {
     const stored = loadFromStorage(STORAGE_KEYS.SETTINGS, null);
     if (stored) {
@@ -59,6 +62,14 @@ export function SettingsProvider({ children }) {
 
   function updateSettings(updates) {
     setSettings((prev) => ({ ...prev, ...updates }));
+    if (updates.businessName || updates.phone || updates.address) {
+      logAction({
+        actionType: "UPDATE_BUSINESS_INFO",
+        targetTable: "settings",
+        targetId: "business-info",
+        summary: "İşletme bilgileri (ad/telefon/adres) güncellendi",
+      });
+    }
   }
 
   return (
