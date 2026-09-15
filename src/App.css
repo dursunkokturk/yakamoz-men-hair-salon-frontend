@@ -1515,3 +1515,46 @@ button {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
+
+/* ============ SETTINGS SUB-TABS ============ */
+.settings-panel {
+  max-width: 480px;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.settings-tabs__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.settings-tabs__item:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.settings-tabs__item.is-active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.settings-panel__content {
+  max-width: 420px;
+}
