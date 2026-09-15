@@ -30,8 +30,8 @@ import { ThemeProvider } from "./context/ThemeContext";
 function App() {
   return (
     <ThemeProvider>
-      <SettingsProvider>
-        <AuditLogProvider>
+      <AuditLogProvider>
+        <SettingsProvider>
           <NotificationProvider>
             <AuthProvider>
               <ServiceProvider>
@@ -77,8 +77,8 @@ function App() {
               </ServiceProvider>
             </AuthProvider>
           </NotificationProvider>
-        </AuditLogProvider>
-      </SettingsProvider>
+        </SettingsProvider>
+      </AuditLogProvider>
     </ThemeProvider>
   );
 }
