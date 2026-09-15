@@ -16,14 +16,12 @@ import { Modal } from "../ui/Modal";
 import { Badge } from "../ui/Badge";
 import { ServiceManagerList } from "../services/ServiceManagerList";
 import { ClosedDaysManager } from "../admin/ClosedDaysManager";
-import { PasswordSettings } from "../admin/PasswordSettings";
-import { BusinessHoursSettings } from "../admin/BusinessHoursSettings";
-import { ApprovalSettings } from "../admin/ApprovalSettings";
 import { StaffManager } from "../admin/StaffManager";
 import { NotificationsPanel } from "../admin/NotificationsPanel";
 import { AuditLogPanel } from "../admin/AuditLogPanel";
 import { dayjs, formatDateShort, formatDateTR, todayISO } from "../../utils/dateUtils";
 import { AppointmentFilters } from "../admin/AppointmentFilters";
+import { SettingsPanel } from "../admin/SettingsPanel";
 
 const TABS = [
   { id: "appointments", label: "Randevular" },
@@ -80,14 +78,7 @@ export function AdminPanel() {
       {activeTab === "staff" && <StaffManager />}
       {activeTab === "notifications" && <NotificationsPanel />}
       {activeTab === "auditLog" && <AuditLogPanel />}
-      {activeTab === "settings" && (
-        <>
-          <BusinessHoursSettings />
-          <ApprovalSettings />
-          <PasswordSettings />
-        </>
-      )
-      }
+      {activeTab === "settings" && <SettingsPanel />}
     </div>
   );
 }
