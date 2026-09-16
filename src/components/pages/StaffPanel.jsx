@@ -10,6 +10,7 @@ import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { formatDateTR } from "../../utils/dateUtils";
+import { useNavigate } from "react-router-dom";
 
 const FILTERS = [
   { value: STAFF_APPROVAL_STATUS.PENDING, label: "Onay Bekleyen" },
@@ -21,6 +22,7 @@ export function StaffPanel() {
   const { currentUser, logout } = useAuth();
   const { appointments, approveStaffWork } = useAppointments();
   const [filter, setFilter] = useState(STAFF_APPROVAL_STATUS.PENDING);
+  const navigate = useNavigate();
 
   useApprovalWatcher(); // Bölüm 9.1: panel açıkken periyodik + mount anında kontrol
 
@@ -44,9 +46,14 @@ export function StaffPanel() {
           <h1>İşlem Onay Paneli</h1>
           <p>Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
         </div>
-        <Button variant="ghost" onClick={logout}>
-          <LogOut size={16} /> Çıkış
-        </Button>
+        <div className="appointment-detail__actions">
+          <Button variant="ghost" onClick={() => navigate("/staff/approved-today")}>
+            Günlük Onaylı Müşteriler
+          </Button>
+          <Button variant="ghost" onClick={logout}>
+            <LogOut size={16} /> Çıkış
+          </Button>
+        </div>
       </div>
 
       <div className="admin-tabs">
@@ -85,15 +92,15 @@ export function StaffPanel() {
                 a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED
                   ? "approved"
                   : a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED
-                  ? "cancelled"
-                  : "pending"
+                    ? "cancelled"
+                    : "pending"
               }
             >
               {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED
                 ? "Onaylandı"
                 : a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED
-                ? "Süresi Geçti"
-                : "Onay Bekliyor"}
+                  ? "Süresi Geçti"
+                  : "Onay Bekliyor"}
             </Badge>
             {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING && (
               <Button size="sm" onClick={() => handleApprove(a)}>
