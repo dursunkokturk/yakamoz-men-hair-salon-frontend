@@ -112,7 +112,7 @@ export function AppointmentProvider({ children }) {
             ...a,
             status: APPOINTMENT_STATUS.COMPLETED,
             completedAt,
-            STAFF_APPROVAL_STATUS: STAFF_APPROVAL_STATUS.PENDING,
+            staffApprovalStatus: STAFF_APPROVAL_STATUS.PENDING,
             staffApprovedBy: null,
             staffApprovedAt: null,
           }
