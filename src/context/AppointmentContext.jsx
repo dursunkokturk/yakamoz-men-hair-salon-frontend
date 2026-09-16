@@ -93,11 +93,12 @@ export function AppointmentProvider({ children }) {
     return appointment;
   }
 
-  function approveAppointment(id) {
+  function approveAppointment(id, actor) {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: APPOINTMENT_STATUS.APPROVED } : a))
     );
     logAction({
+      actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
       actionType: "APPROVE_APPOINTMENT", targetTable: "appointments", targetId: id,
       summary: "Randevu admin tarafından onaylandı"
     });
@@ -169,17 +170,27 @@ export function AppointmentProvider({ children }) {
     );
   }
 
-  function cancelAppointment(id) {
+  function cancelAppointment(id, actor) {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: APPOINTMENT_STATUS.CANCELLED } : a))
     );
+    logAction({
+      actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
+      actionType: "CANCEL_APPOINTMENT", targetTable: "appointments", targetId: id,
+      summary: "Randevu iptal edildi",
+    });
   }
 
-  function deleteAppointment(id) {
+  function deleteAppointment(id, actor) {
+    logAction({
+      actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
+      actionType: "DELETE_APPOINTMENT", targetTable: "appointments", targetId: id,
+      summary: "Randevu kaydı silindi",
+    });
     setAppointments((prev) => prev.filter((a) => a.id !== id));
   }
 
-  function rescheduleAppointment(id, newDate, newTime) {
+  function rescheduleAppointment(id, newDate, newTime, actor) {
     if (!isDateBookable(newDate)) {
       throw new Error("DATE_CLOSED");
     }
@@ -191,6 +202,11 @@ export function AppointmentProvider({ children }) {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, date: newDate, time: newTime } : a))
     );
+    logAction({
+      actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
+      actionType: "RESCHEDULE_APPOINTMENT", targetTable: "appointments", targetId: id,
+      summary: `Randevu tarihi değiştirildi → ${newDate} ${newTime}`,
+    });
   }
 
   function getAppointmentsByDate(date) {

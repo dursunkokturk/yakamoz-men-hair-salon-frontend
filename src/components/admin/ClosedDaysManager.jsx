@@ -5,10 +5,12 @@ import { useClosedDays } from "../../context/ClosedDayContext";
 import { Button } from "../ui/Button";
 import { Select } from "../ui/Select";
 import { formatDateTR } from "../../utils/dateUtils";
+import { useAuth } from "../../context/AuthContext";
 
 const CLOSURE_REASONS = ["Resmi Tatil", "Cenaze", "Hastalık", "Bakım", "Diğer"];
 
 export function ClosedDaysManager() {
+  const { currentUser } = useAuth();
   const { closedDays, addClosedDay, removeClosedDay } = useClosedDays();
   const [date, setDate] = useState("");
   const [reasonType, setReasonType] = useState(CLOSURE_REASONS[0]);
@@ -18,7 +20,7 @@ export function ClosedDaysManager() {
     if (!date) return toast.error("Lütfen bir tarih seçin");
     const finalReason = reasonType === "Diğer" ? (customReason.trim() || "Diğer") : reasonType;
     try {
-      addClosedDay(date, finalReason);
+      addClosedDay(date, finalReason, currentUser);
       toast.success("Kapalı gün eklendi");
       setDate("");
       setCustomReason("");
@@ -58,7 +60,7 @@ export function ClosedDaysManager() {
         {closedDays.map((d) => (
           <li key={d.id}>
             <span>{formatDateTR(d.date)} — {d.reason || "Belirtilmedi"}</span>
-            <button onClick={() => removeClosedDay(d.id)} aria-label="Sil"><Trash2 size={16} /></button>
+            <button onClick={() => removeClosedDay(d.id, currentUser)} aria-label="Sil"><Trash2 size={16} /></button>
           </li>
         ))}
         {closedDays.length === 0 && <p className="service-manager__empty">Kapalı gün eklenmedi.</p>}

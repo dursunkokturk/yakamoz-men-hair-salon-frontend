@@ -20,22 +20,26 @@ export function ServiceProvider({ children }) {
     saveToStorage(STORAGE_KEYS.SERVICES, services);
   }, [services]);
 
-  function addService(service) {
+  function addService(service, currentUser) {
+    const { currentUser } = useAuth();
     const newService = { ...service, id: `svc-${Date.now()}` };
     setServices((prev) => [...prev, newService]);
     return newService;
   }
 
-  function updateService(id, updates) {
+  function updateService(id, updates, currentUser) {
+    const { currentUser } = useAuth();
     setServices((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
   }
 
-  function deleteService(id) {
+  function deleteService(id, currentUser) {
+    const { currentUser } = useAuth();
     setServices((prev) => prev.filter((s) => s.id !== id));
   }
 
   // Aktif / Pasif toggle
-  function toggleServiceStatus(id) {
+  function toggleServiceStatus(id, currentUser) {
+    const { currentUser } = useAuth();
     setServices((prev) =>
       prev.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s))
     );
