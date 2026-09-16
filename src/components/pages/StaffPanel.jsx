@@ -76,6 +76,12 @@ export function StaffPanel() {
             <div>
               <strong>{a.fullName} — {a.serviceName}</strong>
               <span>{formatDateTR(a.date)} · {a.time}</span>
+              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
+                <span>Telefon: {a.phone}</span>
+              )}
+              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
+                <span>İşlem Süresi: {a.durationMinutes} dk</span>
+              )}
               <span>Ücret: {a.price} ₺</span>
               <span className="admin-blocked__date">
                 Tamamlanma: {a.completedAt ? new Date(a.completedAt).toLocaleString("tr-TR") : "-"}

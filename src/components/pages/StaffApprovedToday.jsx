@@ -59,6 +59,9 @@ export function StaffApprovedToday() {
           <div key={a.id} className="admin-blocked__item">
             <div>
               <strong><CheckCircle2 size={14} /> {a.fullName} — {a.serviceName}</strong>
+              <span>Telefon: {a.phone}</span>
+              <span>{formatDateTR(a.date)} · {a.time}</span>
+              <span>İşlem Süresi: {a.durationMinutes} dk</span>
               <span>Ücret: {a.price} ₺</span>
               <span className="admin-blocked__date">
                 Onaylayan: {a.staffApprovedBy} · {a.staffApprovedAt ? new Date(a.staffApprovedAt).toLocaleString("tr-TR") : "-"}
