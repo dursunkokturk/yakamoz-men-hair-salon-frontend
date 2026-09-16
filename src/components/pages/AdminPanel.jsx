@@ -84,6 +84,7 @@ export function AdminPanel() {
 }
 
 function AppointmentsTab() {
+  const { currentUser } = useAuth();
   const { getAppointmentsByDate, approveAppointment, completeAppointment, cancelAppointment, deleteAppointment, rescheduleAppointment } =
     useAppointments();
   const { blockCustomer } = useBlockedCustomers();
@@ -130,26 +131,26 @@ function AppointmentsTab() {
   }
 
   function handleApprove() {
-    approveAppointment(selectedAppointment.id);
+    approveAppointment(selectedAppointment.id, currentUser);
     toast.success("Randevu onaylandı");
     closeDetail();
   }
 
   function handleComplete() {
-    completeAppointment(selectedAppointment.id);
+    completeAppointment(selectedAppointment.id, currentUser);
     toast.success("Randevu tamamlandı olarak işaretlendi");
     closeDetail();
   }
 
   function handleCancel() {
-    cancelAppointment(selectedAppointment.id);
+    cancelAppointment(selectedAppointment.id, currentUser);
     toast.info("Randevu iptal edildi");
     closeDetail();
   }
 
   function handleDelete() {
     if (window.confirm("Bu randevu kaydı silinsin mi?")) {
-      deleteAppointment(selectedAppointment.id);
+      deleteAppointment(selectedAppointment.id, currentUser);
       toast.info("Randevu silindi");
       closeDetail();
     }
@@ -157,8 +158,8 @@ function AppointmentsTab() {
 
   function handleBlock() {
     if (window.confirm(`${selectedAppointment.fullName} engellensin mi?`)) {
-      blockCustomer(selectedAppointment.fullName, selectedAppointment.phone, "Admin tarafından engellendi");
-      cancelAppointment(selectedAppointment.id);
+      blockCustomer(selectedAppointment.fullName, selectedAppointment.phone, "Admin tarafından engellendi", currentUser);
+      cancelAppointment(selectedAppointment.id, currentUser);
       toast.info("Müşteri engellendi");
       closeDetail();
     }
@@ -166,7 +167,7 @@ function AppointmentsTab() {
 
   function handleReschedule() {
     try {
-      rescheduleAppointment(selectedAppointment.id, rescheduleDate, rescheduleTime);
+      rescheduleAppointment(selectedAppointment.id, rescheduleDate, rescheduleTime, currentUser);
       toast.success("Randevu tarihi güncellendi");
       closeDetail();
     } catch (err) {
@@ -343,6 +344,7 @@ function AppointmentsTab() {
 }
 
 function BlockedCustomersTab() {
+  const { currentUser } = useAuth();
   const { blockedCustomers, unblockCustomer } = useBlockedCustomers();
 
   return (
@@ -358,7 +360,7 @@ function BlockedCustomersTab() {
                 <span>{b.phone}</span>
                 <span className="admin-blocked__date">{formatDateShort(b.blockedAt)} tarihinde engellendi</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => unblockCustomer(b.id)}>
+              <Button variant="ghost" size="sm" onClick={() => unblockCustomer(b.id, currentUser)}>
                 Engeli Kaldır
               </Button>
             </li>

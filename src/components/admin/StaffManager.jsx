@@ -7,11 +7,13 @@ import { useAuth } from "../../context/AuthContext";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { useAppointments } from "../../context/AppointmentContext";
 
 export function StaffManager() {
   const { staffUsers, addStaffUser, updateStaffUser, deleteStaffUser } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState({ fullName: "", username: "", password: "" });
+  const { deleteAppointmentsByStaffUsername } = useAppointments();
 
   function handleAdd() {
     if (!form.fullName.trim() || !form.username.trim() || form.password.length < 6) {
@@ -31,6 +33,9 @@ export function StaffManager() {
   function handleDelete(staff) {
     if (window.confirm(`"${staff.fullName}" personelinin hesabını silmek istiyor musunuz?`)) {
       const alsoDeleteHistory = window.confirm("Geçmiş işlem kayıtları da silinsin mi? (İptal = sadece hesap silinir)");
+      if (alsoDeleteHistory) {
+        deleteAppointmentsByStaffUsername(staff.username);
+      }
       deleteStaffUser(staff.id, { alsoDeleteHistory });
       toast.info("Personel hesabı silindi");
     }

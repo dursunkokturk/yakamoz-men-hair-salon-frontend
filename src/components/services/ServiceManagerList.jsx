@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pencil, Trash2, Plus, Eye, EyeOff } from "lucide-react";
 import { useServices } from "../../context/ServiceContext";
+import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { ServiceForm } from "./ServiceForm";
@@ -8,6 +9,7 @@ import { toast } from "react-toastify";
 
 export function ServiceManagerList() {
   const { services, addService, updateService, deleteService, toggleServiceStatus } = useServices();
+  const { currentUser } = useAuth();
   const [editingService, setEditingService] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -23,10 +25,10 @@ export function ServiceManagerList() {
 
   function handleSubmit(values) {
     if (editingService) {
-      updateService(editingService.id, values);
+      updateService(editingService.id, values, currentUser);
       toast.success("Hizmet güncellendi");
     } else {
-      addService(values);
+      addService(values, currentUser);
       toast.success("Hizmet eklendi");
     }
     setIsFormOpen(false);
@@ -34,14 +36,14 @@ export function ServiceManagerList() {
 
   function handleDelete(service) {
     if (window.confirm(`"${service.name}" hizmetini silmek istediğinize emin misiniz?`)) {
-      deleteService(service.id);
+      deleteService(service.id, currentUser);
       toast.info("Hizmet silindi");
     }
   }
 
   // Servis Aktif Pasif Bildirimi
   function handleToggle(service) {
-    toggleServiceStatus(service.id);
+    toggleServiceStatus(service.id, currentUser);
     toast.info(
       service.isActive ? `"${service.name}" pasife alındı` : `"${service.name}" aktif edildi`
     );
