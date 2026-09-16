@@ -215,6 +215,11 @@ export function AppointmentProvider({ children }) {
       .sort((a, b) => a.time.localeCompare(b.time));
   }
 
+  /** Admin Isten Ayrilan Personelin Onayladigi Randevu Kayitlarini da Silmek Isterse Cagrilir. */
+  function deleteAppointmentsByStaffUsername(username) {
+    setAppointments((prev) => prev.filter((a) => a.staffApprovedBy !== username));
+  }
+  
   return (
     <AppointmentContext.Provider
       value={{
