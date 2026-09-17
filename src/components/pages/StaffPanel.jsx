@@ -9,7 +9,7 @@ import { useAppointments, STAFF_APPROVAL_STATUS, APPOINTMENT_STATUS } from "../.
 import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { formatDateTR } from "../../utils/dateUtils";
+import { formatDateTR, todayISO } from "../../utils/dateUtils";
 import { useNavigate } from "react-router-dom";
 
 const FILTERS = [
@@ -18,21 +18,39 @@ const FILTERS = [
   { value: STAFF_APPROVAL_STATUS.EXPIRED, label: "Süresi Geçen" },
 ];
 
+const STATUS_BADGE_MAP = {
+  [STAFF_APPROVAL_STATUS.APPROVED]: { badgeStatus: "approved", label: "Onaylanmış" },
+  [STAFF_APPROVAL_STATUS.EXPIRED]: { badgeStatus: "cancelled", label: "Süresi Geçmiş" },
+  [STAFF_APPROVAL_STATUS.PENDING]: { badgeStatus: "pending", label: "Onay Bekleyen" },
+};
+
 export function StaffPanel() {
   const { currentUser, logout } = useAuth();
   const { appointments, approveStaffWork } = useAppointments();
-  const [filter, setFilter] = useState(STAFF_APPROVAL_STATUS.PENDING);
+  // Bölüm 27 (v5): tüm durumlar filtrelenebilir olmalı ve birden fazlası birlikte
+  // seçilebilmeli — varsayılan olarak üçü de seçili gelir (panel açılışında filtresiz tam liste).
+  const [selectedStatuses, setSelectedStatuses] = useState(() => FILTERS.map((f) => f.value));
   const navigate = useNavigate();
+  const today = todayISO();
 
   useApprovalWatcher(); // Bölüm 9.1: panel açıkken periyodik + mount anında kontrol
 
+  // "o güne ait" — panel yalnızca bulunulan günün tamamlanmış
+  // işlemlerini otomatik yükler, ayrı bir "listele" adımı gerekmez.
   const completed = useMemo(
-    () => appointments.filter((a) => a.status === APPOINTMENT_STATUS.COMPLETED && a.staffApprovalStatus),
-    [appointments]
+    () => appointments.filter(
+      (a) => a.status === APPOINTMENT_STATUS.COMPLETED && a.staffApprovalStatus && a.date === today),
+    [appointments, today]
   );
   const filtered = completed
-    .filter((a) => a.staffApprovalStatus === filter)
+    .filter((a) => selectedStatuses.includes(a.staffApprovalStatus))
     .sort((a, b) => (b.completedAt || "").localeCompare(a.completedAt || ""));
+
+  function toggleStatus(value) {
+    setSelectedStatuses((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  }
 
   function handleApprove(appointment) {
     approveStaffWork(appointment.id, currentUser);
@@ -44,7 +62,7 @@ export function StaffPanel() {
       <div className="admin-topbar">
         <div>
           <h1>İşlem Onay Paneli</h1>
-          <p>Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
+          <p>{formatDateTR(today)} Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
         </div>
         <div className="appointment-detail__actions">
           <Button variant="ghost" onClick={() => navigate("/staff/approved-today")}>
@@ -61,8 +79,9 @@ export function StaffPanel() {
           <button
             key={f.value}
             type="button"
-            className={`admin-tabs__item ${filter === f.value ? "is-active" : ""}`}
-            onClick={() => setFilter(f.value)}
+            className={`admin-tabs__item ${selectedStatuses.includes(f.value) ? "is-active" : ""}`}
+            onClick={() => toggleStatus(f.value)}
+            aria-pressed={selectedStatuses.includes(f.value)}
           >
             {f.label}
           </button>
@@ -70,51 +89,49 @@ export function StaffPanel() {
       </div>
 
       <div className="admin-blocked__list">
-        {filtered.length === 0 && <p className="admin-appointments__empty">Bu filtrede kayıt yok.</p>}
-        {filtered.map((a) => (
-          <div key={a.id} className="admin-blocked__item">
-            <div>
-              <strong>{a.fullName} — {a.serviceName}</strong>
-              <span>{formatDateTR(a.date)} · {a.time}</span>
-              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
-                <span>Telefon: {a.phone}</span>
-              )}
-              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
-                <span>İşlem Süresi: {a.durationMinutes} dk</span>
-              )}
-              <span>Ücret: {a.price} ₺</span>
-              <span className="admin-blocked__date">
-                Tamamlanma: {a.completedAt ? new Date(a.completedAt).toLocaleString("tr-TR") : "-"}
-              </span>
-              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
+        {filtered.length === 0 && (
+          <p className="admin-appointments__empty">
+            {selectedStatuses.length === 0
+              ? "Görmek için en az bir durum seçin."
+              : "Bugün için bu filtrede kayıt yok."}
+          </p>
+        )}
+        {filtered.map((a) => {
+          const badgeInfo = STATUS_BADGE_MAP[a.staffApprovalStatus];
+          return (
+            <div key={a.id} className="admin-blocked__item">
+              <div>
+                <strong>{a.fullName} — {a.serviceName}{" "}
+                  <span className="staff-status-inline">
+                    <Badge status={badgeInfo.badgeStatus}>{badgeInfo.label}</Badge>
+                  </span>
+                </strong>
+                <span>{formatDateTR(a.date)} · {a.time}</span>
+                {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
+                  <span>Telefon: {a.phone}</span>
+                )}
+                {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
+                  <span>İşlem Süresi: {a.durationMinutes} dk</span>
+                )}
+                <span>Ücret: {a.price} ₺</span>
                 <span className="admin-blocked__date">
-                  Onaylayan: {a.staffApprovedBy} ·{" "}
-                  {a.staffApprovedAt ? new Date(a.staffApprovedAt).toLocaleString("tr-TR") : ""}
+                  Tamamlanma: {a.completedAt ? new Date(a.completedAt).toLocaleString("tr-TR") : "-"}
                 </span>
+                {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
+                  <span className="admin-blocked__date">
+                    Onaylayan: {a.staffApprovedBy} ·{" "}
+                    {a.staffApprovedAt ? new Date(a.staffApprovedAt).toLocaleString("tr-TR") : ""}
+                  </span>
+                )}
+              </div>
+              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING && (
+                <Button size="sm" onClick={() => handleApprove(a)}>
+                  <CheckCircle2 size={16} /> Onayla
+                </Button>
               )}
             </div>
-            <Badge
-              status={
-                a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED
-                  ? "approved"
-                  : a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED
-                    ? "cancelled"
-                    : "pending"
-              }
-            >
-              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED
-                ? "Onaylandı"
-                : a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED
-                  ? "Süresi Geçti"
-                  : "Onay Bekliyor"}
-            </Badge>
-            {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING && (
-              <Button size="sm" onClick={() => handleApprove(a)}>
-                <CheckCircle2 size={16} /> Onayla
-              </Button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
