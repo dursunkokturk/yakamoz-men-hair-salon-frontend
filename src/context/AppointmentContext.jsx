@@ -24,9 +24,21 @@ export const STAFF_APPROVAL_STATUS = {
 };
 
 export function AppointmentProvider({ children }) {
-  const [appointments, setAppointments] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.APPOINTMENTS, [])
-  );
+  const [appointments, setAppointments] = useState(function initAppointments() {
+    const stored = loadFromStorage(STORAGE_KEYS.APPOINTMENTS, []);
+    var fixed = stored.map(function migrateOne(a) {
+      var hasLegacyField = Object.prototype.hasOwnProperty.call(a, "STAFF_APPROVAL_STATUS");
+      if (a.staffApprovalStatus || !hasLegacyField) {
+        return a;
+      }
+      var legacyValue = a.STAFF_APPROVAL_STATUS;
+      var copy = Object.assign({}, a);
+      delete copy.STAFF_APPROVAL_STATUS;
+      copy.staffApprovalStatus = legacyValue;
+      return copy;
+    });
+    return fixed;
+  });
 
   // isDateBookable'ın Ihtiyac Duydugu Bagimliliklar
   const { isDateClosed, getClosedDayInfo } = useClosedDays();
@@ -219,7 +231,7 @@ export function AppointmentProvider({ children }) {
   function deleteAppointmentsByStaffUsername(username) {
     setAppointments((prev) => prev.filter((a) => a.staffApprovedBy !== username));
   }
-  
+
   return (
     <AppointmentContext.Provider
       value={{

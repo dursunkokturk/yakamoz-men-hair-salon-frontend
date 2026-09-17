@@ -10,7 +10,6 @@ import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { formatDateTR, todayISO } from "../../utils/dateUtils";
-import { useNavigate } from "react-router-dom";
 
 const FILTERS = [
   { value: STAFF_APPROVAL_STATUS.PENDING, label: "Onay Bekleyen" },
@@ -30,7 +29,6 @@ export function StaffPanel() {
   // Bölüm 27 (v5): tüm durumlar filtrelenebilir olmalı ve birden fazlası birlikte
   // seçilebilmeli — varsayılan olarak üçü de seçili gelir (panel açılışında filtresiz tam liste).
   const [selectedStatuses, setSelectedStatuses] = useState(() => FILTERS.map((f) => f.value));
-  const navigate = useNavigate();
   const today = todayISO();
 
   useApprovalWatcher(); // Bölüm 9.1: panel açıkken periyodik + mount anında kontrol
@@ -65,9 +63,6 @@ export function StaffPanel() {
           <p>{formatDateTR(today)} Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
         </div>
         <div className="appointment-detail__actions">
-          <Button variant="ghost" onClick={() => navigate("/staff/approved-today")}>
-            Günlük Onaylı Müşteriler
-          </Button>
           <Button variant="ghost" onClick={logout}>
             <LogOut size={16} /> Çıkış
           </Button>
