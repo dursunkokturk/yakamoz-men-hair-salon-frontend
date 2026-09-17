@@ -1558,3 +1558,10 @@ button {
 .settings-panel__content {
   max-width: 420px;
 }
+
+/* ============ STAFF PANEL — DURUM ROZETİ, MÜŞTERİ ADININ DEVAMINDA (v5) ============ */
+.staff-status-inline {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
