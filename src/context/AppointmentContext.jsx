@@ -16,6 +16,9 @@ export const APPOINTMENT_STATUS = {
   CANCELLED: "cancelled", // İptal
 };
 
+// Onay süresi artık Admin panelinden yapılandırılamaz, sabittir.
+const STAFF_APPROVAL_TIMEOUT_HOURS = 1;
+
 // Personel onay alanı — randevu durumundan (status) bağımsız ayrı bir alan.
 export const STAFF_APPROVAL_STATUS = {
   PENDING: "pending",
@@ -140,6 +143,13 @@ export function AppointmentProvider({ children }) {
 
   /** Bölüm 9.1: Personel, tamamlanan işlemi ve ücreti onaylar. */
   function approveStaffWork(id, staffUser) {
+    // v9 — Bilinen Teknik Riskler: yazmadan hemen önce güncel durumu kontrol et.
+    // Süre-aşımı taraması ile bu tıklama aynı anda gerçekleşmişse ve kayıt zaten
+    // "Onaylandı" ise (örn. Admin bu arada onayladıysa), üzerine yazma.
+    const target = appointments.find((a) => a.id === id);
+    if (target && target.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED) {
+      return;
+    }
     const approvedAt = new Date().toISOString();
     setAppointments((prev) =>
       prev.map((a) =>
@@ -159,12 +169,14 @@ export function AppointmentProvider({ children }) {
   }
 
   /**
-   * Backend/cron olmadığı için süresi geçen onaylar istemci tarafında taranır.
-   * useApprovalWatcher hook'u tarafından hem periyodik hem de panel açılışında (mount) çağrılır.
-   */
-  function checkExpiredStaffApprovals(thresholdHours) {
+  * Backend/cron olmadığı için süresi geçen onaylar istemci tarafında taranır.
+  * useApprovalWatcher hook'u tarafından hem periyodik hem de panel açılışında (mount) çağrılır.
+  * v9: staffApprovalStatus === PENDING koşulu zaten bu fonksiyonun kendisini race'e karşı
+  * korur — kayıt bu arada onaylandıysa (staffApprovalStatus artık "approved") tarama onu atlar.
+  */
+  function checkExpiredStaffApprovals() {
     const now = Date.now();
-    const thresholdMs = (Number(thresholdHours) || 4) * 60 * 60 * 1000;
+    const thresholdMs = STAFF_APPROVAL_TIMEOUT_HOURS * 60 * 60 * 1000;
     setAppointments((prev) =>
       prev.map((a) => {
         const isExpirable =
@@ -176,6 +188,11 @@ export function AppointmentProvider({ children }) {
           type: NOTIFICATION_TYPES.STAFF_APPROVAL_EXPIRED,
           appointmentId: a.id, customerName: a.fullName, phone: a.phone,
           amount: a.price, occurredAt: a.completedAt,
+          // v9: "mümkün olduğunca ... hizmet, ilgili Personel ve sürenin dolduğu
+          // tarih/saat bilgileriyle" — bildirime bu ek alanları da taşıyoruz.
+          serviceName: a.serviceName,
+          assignedStaffUsername: a.staffApprovedBy ?? null,
+          expiredAt: new Date(now).toISOString(),
         });
         return { ...a, staffApprovalStatus: STAFF_APPROVAL_STATUS.EXPIRED };
       })

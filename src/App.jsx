@@ -22,7 +22,6 @@ import { AdminPanel } from "./components/pages/AdminPanel";
 import { Login } from "./components/pages/Login";
 import { NotFound } from "./components/pages/NotFound";
 import { StaffPanel } from "./components/pages/StaffPanel";
-import { StaffApprovedToday } from "./components/pages/StaffApprovedToday";
 
 import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
@@ -54,14 +53,6 @@ function App() {
                                 element={
                                   <ProtectedRoute allowedRoles={["staff"]}>
                                     <StaffPanel />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/staff/approved-today"
-                                element={
-                                  <ProtectedRoute allowedRoles={["staff", "admin"]}>
-                                    <StaffApprovedToday />
                                   </ProtectedRoute>
                                 }
                               />

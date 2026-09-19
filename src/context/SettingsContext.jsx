@@ -11,7 +11,6 @@ const DEFAULT_SETTINGS = {
   workStartHour: 9,
   workEndHour: 19,
   closedWeekday: 1, // Salı — dayjs weekday(): 0=Pazartesi, 1=Salı
-  staffApprovalTimeoutHours: 4, // Personelin onay için süresi
   maxAppointmentsPerSlotOverride: null, // null => normal (1), Admin bayramda 2 girebilir
 };
 
