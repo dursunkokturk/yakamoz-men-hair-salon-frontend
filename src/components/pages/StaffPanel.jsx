@@ -1,66 +1,61 @@
-// Yetki Verilen Personel Gunluk Musteri Listesini Gorebilir 
-// Islem Bitimi Onay Verebilir
-
-import { useMemo, useState } from "react";
-import { toast } from "react-toastify";
-import { LogOut, CheckCircle2 } from "lucide-react";
+// Bölüm 4 & 9.1 (v8): Personel bu sayfaya girdiği anda, bulunulan güne ait,
+// Admin tarafından HENÜZ ONAYLANMAMIŞ (Randevu Durumu = "Onay Bekliyor") tüm
+// randevular responsive bir tabloda, müşterinin tüm bilgileriyle görüntülenir.
+// Admin bir randevuyu onayladığı anda (status → "approved"), kayıt bu tablodan
+// otomatik olarak kaybolur ve "Personel Müşteri Takibi" (/staff/tracking) sayfasına geçer.
+import { useEffect, useMemo, useState } from "react";
+import { LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { useAppointments, STAFF_APPROVAL_STATUS, APPOINTMENT_STATUS } from "../../context/AppointmentContext";
-import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
+import { useAppointments, APPOINTMENT_STATUS } from "../../context/AppointmentContext";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { formatDateTR, todayISO } from "../../utils/dateUtils";
 
-const FILTERS = [
-  { value: STAFF_APPROVAL_STATUS.PENDING, label: "Onay Bekleyen" },
-  { value: STAFF_APPROVAL_STATUS.APPROVED, label: "Onaylanmış" },
-  { value: STAFF_APPROVAL_STATUS.EXPIRED, label: "Süresi Geçen" },
-];
-
-const STATUS_BADGE_MAP = {
-  [STAFF_APPROVAL_STATUS.APPROVED]: { badgeStatus: "approved", label: "Onaylanmış" },
-  [STAFF_APPROVAL_STATUS.EXPIRED]: { badgeStatus: "cancelled", label: "Süresi Geçmiş" },
-  [STAFF_APPROVAL_STATUS.PENDING]: { badgeStatus: "pending", label: "Onay Bekleyen" },
-};
-
 export function StaffPanel() {
   const { currentUser, logout } = useAuth();
-  const { appointments, approveStaffWork } = useAppointments();
-  // Bölüm 27 (v5): tüm durumlar filtrelenebilir olmalı ve birden fazlası birlikte
-  // seçilebilmeli — varsayılan olarak üçü de seçili gelir (panel açılışında filtresiz tam liste).
-  const [selectedStatuses, setSelectedStatuses] = useState(() => FILTERS.map((f) => f.value));
+  const { appointments } = useAppointments();
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
   const today = todayISO();
 
-  useApprovalWatcher(); // Bölüm 9.1: panel açıkken periyodik + mount anında kontrol
+  // v9 — yakın-gerçek-zamanlı senkron: sekme açıkken periyodik + tekrar görünür
+  // olduğunda yenileme (bkz. Bölüm 9.1, "Bilinen Teknik Riskler").
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    function refresh() {
+      forceTick((n) => n + 1);
+    }
+    const interval = setInterval(refresh, 60 * 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refresh();
+    });
+    return () => clearInterval(interval);
+  }, []);
 
-  // "o güne ait" — panel yalnızca bulunulan günün tamamlanmış
-  // işlemlerini otomatik yükler, ayrı bir "listele" adımı gerekmez.
-  const completed = useMemo(
-    () => appointments.filter(
-      (a) => a.status === APPOINTMENT_STATUS.COMPLETED && a.staffApprovalStatus && a.date === today),
-    [appointments, today]
-  );
-  const filtered = completed
-    .filter((a) => selectedStatuses.includes(a.staffApprovalStatus))
-    .sort((a, b) => (b.completedAt || "").localeCompare(a.completedAt || ""));
-
-  function toggleStatus(value) {
-    setSelectedStatuses((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
-  }
-
-  function handleApprove(appointment) {
-    approveStaffWork(appointment.id, currentUser);
-    toast.success("İşlem onaylandı");
-  }
+  // Bölüm 27 (v8): Personel bu tabloda yalnızca müşteri adına veya hizmete göre filtreleyebilir.
+  const pendingToday = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase("tr-TR");
+    return appointments
+      // v9, madde 4: status === "pending" kontrolü zaten iptal edilmiş (status === "cancelled")
+      // kayıtları otomatik dışlar, çünkü bir randevu aynı anda iki farklı status değerine
+      // sahip olamaz. Bu satır Bölüm 8'deki "İptal edilen randevu" kuralını uygular.
+      .filter((a) => a.date === today && a.status === APPOINTMENT_STATUS.PENDING)
+      .filter(
+        (a) =>
+          !q ||
+          a.fullName.toLocaleLowerCase("tr-TR").includes(q) ||
+          a.serviceName.toLocaleLowerCase("tr-TR").includes(q)
+      )
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [appointments, today, query]);
 
   return (
     <div className="page page--staff">
       <div className="admin-topbar">
         <div>
-          <h1>İşlem Onay Paneli</h1>
-          <p>{formatDateTR(today)} Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
+          <h1>Bugünün Tüm Randevuları</h1>
+          <p>{formatDateTR(today)} · Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
         </div>
         <div className="appointment-detail__actions">
           <Button variant="ghost" onClick={logout}>
@@ -69,65 +64,50 @@ export function StaffPanel() {
         </div>
       </div>
 
-      <div className="admin-tabs">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            className={`admin-tabs__item ${selectedStatuses.includes(f.value) ? "is-active" : ""}`}
-            onClick={() => toggleStatus(f.value)}
-            aria-pressed={selectedStatuses.includes(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <input
+        type="text"
+        className="ui-field__input"
+        placeholder="Müşteri adına veya hizmete göre filtrele..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        style={{ maxWidth: 320, marginBottom: 16 }}
+      />
 
-      <div className="admin-blocked__list">
-        {filtered.length === 0 && (
-          <p className="admin-appointments__empty">
-            {selectedStatuses.length === 0
-              ? "Görmek için en az bir durum seçin."
-              : "Bugün için bu filtrede kayıt yok."}
-          </p>
-        )}
-        {filtered.map((a) => {
-          const badgeInfo = STATUS_BADGE_MAP[a.staffApprovalStatus];
-          return (
-            <div key={a.id} className="admin-blocked__item">
-              <div>
-                <strong>{a.fullName} — {a.serviceName}{" "}
-                  <span className="staff-status-inline">
-                    <Badge status={badgeInfo.badgeStatus}>{badgeInfo.label}</Badge>
-                  </span>
-                </strong>
-                <span>{formatDateTR(a.date)} · {a.time}</span>
-                {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
-                  <span>Telefon: {a.phone}</span>
-                )}
-                {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
-                  <span>İşlem Süresi: {a.durationMinutes} dk</span>
-                )}
-                <span>Ücret: {a.price} ₺</span>
-                <span className="admin-blocked__date">
-                  Tamamlanma: {a.completedAt ? new Date(a.completedAt).toLocaleString("tr-TR") : "-"}
-                </span>
-                {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED && (
-                  <span className="admin-blocked__date">
-                    Onaylayan: {a.staffApprovedBy} ·{" "}
-                    {a.staffApprovedAt ? new Date(a.staffApprovedAt).toLocaleString("tr-TR") : ""}
-                  </span>
-                )}
-              </div>
-              {a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING && (
-                <Button size="sm" onClick={() => handleApprove(a)}>
-                  <CheckCircle2 size={16} /> Onayla
-                </Button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {pendingToday.length === 0 ? (
+        <p className="admin-appointments__empty">Bugün için Admin onayı bekleyen randevu yok.</p>
+      ) : (
+        <div className="table-responsive">
+          <table className="admin-table staff-today-table">
+            <thead>
+              <tr>
+                <th>Müşteri Adı</th>
+                <th>Yapılacak İşlem</th>
+                <th>Randevu Tarihi ve Saati</th>
+                <th>İşlem Süresi</th>
+                <th>Telefon Numarası</th>
+                <th>İşlem Ücreti</th>
+                <th>Kuaför Onay Durumu</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingToday.map((a) => (
+                <tr key={a.id}>
+                  <td data-label="Müşteri Adı">{a.fullName}</td>
+                  <td data-label="Yapılacak İşlem">{a.serviceName}</td>
+                  <td data-label="Randevu Tarihi ve Saati">{formatDateTR(a.date)} · {a.time}</td>
+                  <td data-label="İşlem Süresi">{a.durationMinutes} dk</td>
+                  <td data-label="Telefon Numarası">{a.phone}</td>
+                  <td data-label="İşlem Ücreti">{a.price} ₺</td>
+                  <td data-label="Kuaför Onay Durumu">
+                    {/* Bölüm 4: Bu tabloda göründüğü sürece daima "Onay Bekliyor" */}
+                    <Badge status="pending">Onay Bekliyor</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

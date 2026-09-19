@@ -4,22 +4,14 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import { Clock3 } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
-import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 
 export function ApprovalSettings() {
   const { settings, updateSettings } = useSettings();
-  const [timeoutHours, setTimeoutHours] = useState(settings.staffApprovalTimeoutHours);
   const [bayramMode, setBayramMode] = useState(Boolean(settings.maxAppointmentsPerSlotOverride));
 
   function handleSave() {
-    const hours = Number(timeoutHours);
-    if (!Number.isFinite(hours) || hours <= 0) {
-      toast.error("Geçerli bir saat değeri girin");
-      return;
-    }
     updateSettings({
-      staffApprovalTimeoutHours: hours,
       // Bölüm 6: bayram modu açıkken azami 2, kapalıyken null (varsayılan: 1)
       maxAppointmentsPerSlotOverride: bayramMode ? 2 : null,
     });
@@ -33,14 +25,10 @@ export function ApprovalSettings() {
         <h3>Personel Onayı &amp; Randevu Kapasitesi</h3>
       </div>
 
-      <Input
-        label="Personel onay süresi (saat)"
-        type="number"
-        min={1}
-        hint="Personel bu süre içinde tamamlanan işlemi onaylamazsa Admin'e bildirim gider."
-        value={timeoutHours}
-        onChange={(e) => setTimeoutHours(e.target.value)}
-      />
+      <p className="ui-field__hint">
+        Personel onay süresi sabit olarak <strong>1 saattir</strong> Personel, işlem
+        bitiminden itibaren 1 saat içinde onaylamazsa sistem otomatik olarak Admin'e bildirim gönderir.
+      </p>
 
       <label className="service-form__toggle">
         <input

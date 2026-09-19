@@ -1565,3 +1565,78 @@ button {
   margin-left: 8px;
   vertical-align: middle;
 }
+
+/* ============ STAFF PANEL — BUGÜNÜN TÜM RANDEVULARI (v6) ============ */
+.staff-today-overview {
+  margin-bottom: 28px;
+}
+
+.staff-today-overview__title {
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+  color: var(--color-accent);
+}
+
+/* ============ STAFF TABLOLARI — RESPONSIVE (v8) ============ */
+/* Bölüm 4: "dar ekranlarda yatay kaydırma veya kart görünümüne geçiş" —
+   masaüstü/tablette normal tablo, telefonda kart görünümüne (satır → dikey blok) geçer. */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.staff-today-table,
+.staff-tracking-table {
+  min-width: 720px;
+}
+
+@media (max-width: 640px) {
+
+  .staff-today-table,
+  .staff-tracking-table {
+    min-width: 0;
+  }
+
+  .staff-today-table thead,
+  .staff-tracking-table thead {
+    display: none;
+  }
+
+  .staff-today-table tbody tr,
+  .staff-tracking-table tbody tr {
+    display: block;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .staff-today-table td,
+  .staff-tracking-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: none;
+    font-size: 0.85rem;
+  }
+
+  .staff-today-table td[data-label]::before,
+  .staff-tracking-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--color-text-faint);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .staff-today-table td[data-label=""]::before,
+  .staff-tracking-table td[data-label=""]::before {
+    content: none;
+  }
+}

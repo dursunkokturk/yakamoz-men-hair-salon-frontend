@@ -20,10 +20,10 @@ export function NotificationProvider({ children }) {
     saveToStorage(STORAGE_KEYS.NOTIFICATIONS, notifications);
   }, [notifications]);
 
-  function addNotification({ type, appointmentId, customerName, phone, amount, occurredAt }) {
+  function addNotification({ type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt }) {
     const entry = {
       id: `ntf-${Date.now()}`,
-      type, appointmentId, customerName, phone, amount, occurredAt,
+      type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt,
       createdAt: new Date().toISOString(),
       readAt: null,
     };
