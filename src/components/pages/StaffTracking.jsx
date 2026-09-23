@@ -1,3 +1,5 @@
+// Personel Müşteri Takibi — Admin tarafından onaylanmış randevuların listesi;
+// Personel burada hizmeti tamamlayıp onaylar.
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { LogOut, CheckCircle2, Scissors } from "lucide-react";
@@ -9,11 +11,17 @@ import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { formatDateTR, todayISO } from "../../utils/dateUtils";
 
+const FILTERS = [
+  { value: "waiting", label: "Onay Bekleniyor" },
+  { value: STAFF_APPROVAL_STATUS.APPROVED, label: "Onaylandı" },
+  { value: STAFF_APPROVAL_STATUS.EXPIRED, label: "Süresi Geçti" },
+];
+
 export function StaffTracking() {
   const { currentUser, logout, role } = useAuth();
   const { appointments, completeAppointment, approveStaffWork } = useAppointments();
   const navigate = useNavigate();
-  const [selectedFilters, setSelectedFilters] = useState(() => FILTERS.map((f) => f.value));
+  const [selectedFilter, setSelectedFilter] = useState(FILTERS[0].value);
   const today = todayISO();
 
   useApprovalWatcher();
@@ -29,10 +37,16 @@ export function StaffTracking() {
       forceTick((n) => n + 1);
     }
     const interval = setInterval(refresh, 60 * 1000);
-    document.addEventListener("visibilitychange", () => {
+
+    function handleVisibility() {
       if (document.visibilityState === "visible") refresh();
-    });
-    return () => clearInterval(interval);
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    }
   }, []);
 
   // v9, madde 4: İptal edilen randevular (status === "cancelled") bu tablodan
@@ -51,6 +65,20 @@ export function StaffTracking() {
     [appointments, today]
   );
 
+  function getTrackingState(a) {
+    if (a.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED) return STAFF_APPROVAL_STATUS.APPROVED;
+    if (a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED) return STAFF_APPROVAL_STATUS.EXPIRED;
+    return "waiting";
+  }
+
+  const filtered = trackedToday.filter(
+    (a) => selectedFilter.includes(getTrackingState(a) === selectedFilter)
+  );
+
+  function handleFilterChange(value) {
+    setSelectedFilter(value);
+  }
+
   function handleApprove(appointment) {
     approveStaffWork(appointment.id, currentUser);
     toast.success("İşlem onaylandı");
@@ -64,40 +92,95 @@ export function StaffTracking() {
     toast.success("İşlem tamamlandı olarak işaretlendi, onay bekleniyor");
   }
 
-  {
-    filtered.map((a) => (
-      <tr key={a.id}>
-        <td data-label="Müşteri Adı">{a.fullName}</td>
-        <td data-label="Yapılacak İşlem">{a.serviceName}</td>
-        <td data-label="Randevu Tarihi ve Saati">{formatDateTR(a.date)} · {a.time}</td>
-        <td data-label="İşlem Süresi">{a.durationMinutes} dk</td>
-        <td data-label="Telefon Numarası">{a.phone}</td>
-        <td data-label="İşlem Ücreti">{a.price} ₺</td>
-        <td data-label="İşlem Durumu">{renderStatusCell(a)}</td>
-        <td data-label="">
-          {/* v9: hizmet henüz "Tamamlandı" işaretlenmemişse (status=approved),
-                        "Tamamla" butonu gösterilir. */}
-          {a.status === APPOINTMENT_STATUS.APPROVED && (
-            <Button size="sm" variant="ghost" onClick={() => handleComplete(a)}>
-              <Scissors size={16} /> Tamamla
-            </Button>
-          )}
-          {/* v9: "Süresi Geçti" bir kilit değildir — bu butonun görünürlüğü
-                        yalnızca henüz onaylanmamış olmasına bağlıdır, süre aşımına değil. */}
-          {a.status === APPOINTMENT_STATUS.COMPLETED &&
-            a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING && (
-              <Button size="sm" onClick={() => handleApprove(a)}>
-                <CheckCircle2 size={16} /> Onayla
-              </Button>
-            )}
-          {a.status === APPOINTMENT_STATUS.COMPLETED &&
-            a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED && (
-              <Button size="sm" onClick={() => handleApprove(a)}>
-                <CheckCircle2 size={16} /> Onayla
-              </Button>
-            )}
-        </td>
-      </tr>
-    ))
+  function renderStatusCell(a) {
+    const state = getTrackingState(a);
+    if (state === STAFF_APPROVAL_STATUS.APPROVED) {
+      return <Badge status="approved">{a.staffApprovedBy} onayladı</Badge>;
+    }
+    if (state === STAFF_APPROVAL_STATUS.EXPIRED) {
+      return <Badge status="cancelled">Süresi Geçti</Badge>;
+    }
+    return <Badge status="pending">Onay Bekleniyor</Badge>;
   }
+
+  return (
+    <div className="page page--staff">
+      <div className="admin-topbar">
+        <div>
+          <h1>Personel Müşteri Takibi</h1>
+          <p>{formatDateTR(today)} · Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
+        </div>
+        <div className="appointment-detail__actions">
+          {role === "staff" && (
+            <Button variant="ghost" onClick={() => navigate("/staff")}>Bugünün Tüm Randevuları</Button>
+          )}
+          <Button variant="ghost" onClick={logout}><LogOut size={16} /> Çıkış</Button>
+        </div>
+      </div>
+
+      <div className="admin-tabs">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            className={`admin-tabs__item ${selectedFilter.includes(f.value) ? "is-active" : ""}`}
+            onClick={() => setSelectedFilter(f.value)}
+            aria-pressed={selectedFilter.includes(f.value)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="admin-appointments__empty">
+          Bugün için bu filtrede kayıt yok.
+        </p>
+      ) : (
+        <div className="table-responsive">
+          <table className="admin-table staff-tracking-table">
+            <thead>
+              <tr>
+                <th>Müşteri Adı</th>
+                <th>Yapılacak İşlem</th>
+                <th>Randevu Tarihi ve Saati</th>
+                <th>İşlem Süresi</th>
+                <th>Telefon Numarası</th>
+                <th>İşlem Ücreti</th>
+                <th>İşlem Durumu</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((a) => (
+                <tr key={a.id}>
+                  <td data-label="Müşteri Adı">{a.fullName}</td>
+                  <td data-label="Yapılacak İşlem">{a.serviceName}</td>
+                  <td data-label="Randevu Tarihi ve Saati">{formatDateTR(a.date)} · {a.time}</td>
+                  <td data-label="İşlem Süresi">{a.durationMinutes} dk</td>
+                  <td data-label="Telefon Numarası">{a.phone}</td>
+                  <td data-label="İşlem Ücreti">{a.price} ₺</td>
+                  <td data-label="İşlem Durumu">{renderStatusCell(a)}</td>
+                  <td data-label="">
+                    {a.status === APPOINTMENT_STATUS.APPROVED && (
+                      <Button size="sm" variant="ghost" onClick={() => handleComplete(a)}>
+                        <Scissors size={16} /> Tamamla
+                      </Button>
+                    )}
+                    {a.status === APPOINTMENT_STATUS.COMPLETED &&
+                      (a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING ||
+                        a.staffApprovalStatus === STAFF_APPROVAL_STATUS.EXPIRED) && (
+                        <Button size="sm" onClick={() => handleApprove(a)}>
+                          <CheckCircle2 size={16} /> Onayla
+                        </Button>
+                      )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }

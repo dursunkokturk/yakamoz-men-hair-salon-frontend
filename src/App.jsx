@@ -22,6 +22,7 @@ import { AdminPanel } from "./components/pages/AdminPanel";
 import { Login } from "./components/pages/Login";
 import { NotFound } from "./components/pages/NotFound";
 import { StaffPanel } from "./components/pages/StaffPanel";
+import { StaffTracking } from "./components/pages/StaffTracking";
 
 import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
@@ -53,6 +54,14 @@ function App() {
                                 element={
                                   <ProtectedRoute allowedRoles={["staff"]}>
                                     <StaffPanel />
+                                  </ProtectedRoute>
+                                }
+                              />
+                              <Route
+                                path="/staff/tracking"
+                                element={
+                                  <ProtectedRoute allowedRoles={["staff","admin"]}>
+                                    <StaffTracking />
                                   </ProtectedRoute>
                                 }
                               />
