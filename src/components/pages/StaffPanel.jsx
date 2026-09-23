@@ -58,6 +58,9 @@ export function StaffPanel() {
           <p>{formatDateTR(today)} · Hoş geldin, {currentUser?.fullName || currentUser?.username}</p>
         </div>
         <div className="appointment-detail__actions">
+          <Button variant="ghost" onClick={() => navigate("/staff/tracking")}>
+            Personel Müşteri Takibi
+          </Button>
           <Button variant="ghost" onClick={logout}>
             <LogOut size={16} /> Çıkış
           </Button>
