@@ -72,24 +72,28 @@ export function StaffTracking() {
   }
 
   const filtered = trackedToday.filter(
-    (a) => selectedFilter.includes(getTrackingState(a) === selectedFilter)
+    (a) => getTrackingState(a) === selectedFilter
   );
 
-  function handleFilterChange(value) {
-    setSelectedFilter(value);
-  }
-
   function handleApprove(appointment) {
-    approveStaffWork(appointment.id, currentUser);
-    toast.success("İşlem onaylandı");
+    try {
+      approveStaffWork(appointment.id, currentUser);
+      toast.success("İşlem onaylandı");
+    } catch {
+      toast.error("İşlem yapılamadı, kayıt durumu değişmiş olabilir");
+    }
   }
 
   // v9, madde 6: "Tamamla" — hizmet bitince randevuDurumu = "Tamamlandı" yapar.
   // Bu, "Onayla"dan ayrı bir eylemdir ve Admin'in yanı sıra artık yetkilendirilmiş
   // Personel tarafından da bu tablodan doğrudan tetiklenebilir.
   function handleComplete(appointment) {
-    completeAppointment(appointment.id, currentUser);
-    toast.success("İşlem tamamlandı olarak işaretlendi, onay bekleniyor");
+    try {
+      completeAppointment(appointment.id, currentUser);
+      toast.success("İşlem tamamlandı olarak işaretlendi, onay bekleniyor");
+    } catch {
+      toast.error("İşlem yapılamadı, kayıt durumu değişmiş olabilir");
+    }
   }
 
   function renderStatusCell(a) {
@@ -123,9 +127,9 @@ export function StaffTracking() {
           <button
             key={f.value}
             type="button"
-            className={`admin-tabs__item ${selectedFilter.includes(f.value) ? "is-active" : ""}`}
+            className={`admin-tabs__item ${selectedFilter === f.value ? "is-active" : ""}`}
             onClick={() => setSelectedFilter(f.value)}
-            aria-pressed={selectedFilter.includes(f.value)}
+            aria-pressed={selectedFilter === f.value}
           >
             {f.label}
           </button>

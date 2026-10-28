@@ -1,11 +1,19 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
-import { DEFAULT_MAX_APPOINTMENTS_PER_SLOT } from "../utils/dateUtils";
+import { DEFAULT_MAX_APPOINTMENTS_PER_SLOT, generateTimeSlots, isPastDateTime } from "../utils/dateUtils";
 import { getDateClosureInfo } from "../utils/scheduling";
 import { useClosedDays } from "./ClosedDayContext";
 import { useSettings } from "./SettingsContext";
 import { useAuditLog } from "./AuditLogContext";
 import { useNotifications, NOTIFICATION_TYPES } from "./NotificationContext";
+import { assertRole, ROLES } from "../utils/permissions";
+
+import { useServices } from "./ServiceContext";
+import { useBlockedCustomers } from "./BlockedCustomerContext";
+import { isValidName, isValidPhone, normalizeName } from "../utils/validation";
+import { newId } from "../utils/crypto";
+
+const MAX_ACTIVE_PER_PHONE = 3;
 
 const AppointmentContext = createContext(null);
 
@@ -27,6 +35,8 @@ export const STAFF_APPROVAL_STATUS = {
 };
 
 export function AppointmentProvider({ children }) {
+  const { activeServices } = useServices();
+  const { isCustomerBlocked } = useBlockedCustomers();
   const [appointments, setAppointments] = useState(function initAppointments() {
     const stored = loadFromStorage(STORAGE_KEYS.APPOINTMENTS, []);
     var fixed = stored.map(function migrateOne(a) {
@@ -43,6 +53,15 @@ export function AppointmentProvider({ children }) {
     return fixed;
   });
 
+  // ref her zaman EN GÜNCEL listeyi tutar (render beklemez). Hem hızlı çift tıklamada
+  // çift rezervasyonu hem de interval'in "eski liste" görmesini engeller.
+  const appointmentsRef = useRef(appointments);
+  function commit(updater) {
+    const next = typeof updater === "function" ? updater(appointmentsRef.current) : updater;
+    appointmentsRef.current = next;
+    setAppointments(next);
+  }
+
   // isDateBookable'ın Ihtiyac Duydugu Bagimliliklar
   const { isDateClosed, getClosedDayInfo } = useClosedDays();
   const { settings } = useSettings();
@@ -51,6 +70,7 @@ export function AppointmentProvider({ children }) {
 
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.APPOINTMENTS, appointments);
+    appointmentsRef.current = appointments;
   }, [appointments]);
 
   /** Normalde 1, bayram/istisna dönemlerinde Admin panelden ayarlanan azami 2. */
@@ -64,7 +84,7 @@ export function AppointmentProvider({ children }) {
 
   /** Belirli tarih+saatte, iptal edilmemiş kaç randevu var. */
   function countActiveAppointmentsAt(date, time, excludeId = null) {
-    return appointments.filter(
+    return appointmentsRef.current.filter(
       (a) =>
         a.date === date &&
         a.time === time &&
@@ -89,27 +109,68 @@ export function AppointmentProvider({ children }) {
     return !isClosed;
   }
 
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  function assertValidSlot(date, time) {
+    if (!ISO_DATE.test(date) || !generateTimeSlots().includes(time)) throw new Error("INVALID_INPUT");
+  }
+
+  function findOrThrow(id) {
+    const target = appointmentsRef.current.find((a) => a.id === id);
+    if (!target) throw new Error("NOT_FOUND");
+    return target;
+  }
+
   function createAppointment(data) {
+    if (!isValidName(data.fullName) || !isValidPhone(data.phone)) throw new Error("INVALID_INPUT");
+    assertValidSlot(data.date, data.time);
+    const phone = data.phone.trim();
+
+    // Fiyat/süre/ad müşteriden gelmez, servis kaydından alınır
+    const service = activeServices.find((s) => s.id === data.serviceId);
+    if (!service) throw new Error("INVALID_SERVICE");
+
+    if (isCustomerBlocked(data.fullName, phone)) throw new Error("BLOCKED");
 
     // Kapali Gun Kontrolu Artik Burada Uygulaniyor
     if (!isDateBookable(data.date)) {
       throw new Error("DATE_CLOSED");
     }
+    if (isPastDateTime(data.date, data.time)) throw new Error("PAST_DATE");
     if (isSlotFull(data.date, data.time)) {
       throw new Error("SLOT_FULL");
     }
+
+    const activeCount = appointmentsRef.current.filter(
+      (a) => a.phone === phone &&
+        (a.status === APPOINTMENT_STATUS.PENDING || a.status === APPOINTMENT_STATUS.APPROVED)
+    ).length;
+    if (activeCount >= MAX_ACTIVE_PER_PHONE) throw new Error("TOO_MANY_APPOINTMENTS");
+
     const appointment = {
-      id: `apt-${Date.now()}`,
+      id: newId("apt"),
+      fullName: normalizeName(data.fullName),
+      phone,
+      date: data.date,
+      time: data.time,
+      serviceId: service.id,
+      serviceName: service.name,
+      durationMinutes: service.durationMinutes,
+      price: service.price,
       status: APPOINTMENT_STATUS.PENDING,
       createdAt: new Date().toISOString(),
-      ...data,
     };
-    setAppointments((prev) => [...prev, appointment]);
+    commit((prev) => [...prev, appointment]);
+    logAction({
+      actorUsername: "customer", actionType: "CREATE_APPOINTMENT",
+      targetTable: "appointments", targetId: appointment.id, summary: "Müşteri randevu oluşturdu",
+    });
     return appointment;
   }
 
   function approveAppointment(id, actor) {
-    setAppointments((prev) =>
+    assertRole(actor, ROLES.ADMIN);
+    if (findOrThrow(id).status !== APPOINTMENT_STATUS.PENDING) throw new Error("INVALID_STATE");
+    commit((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: APPOINTMENT_STATUS.APPROVED } : a))
     );
     logAction({
@@ -120,8 +181,10 @@ export function AppointmentProvider({ children }) {
   }
 
   function completeAppointment(id, actor) {
+    assertRole(actor, ROLES.ADMIN, ROLES.STAFF);
+    if (findOrThrow(id).status !== APPOINTMENT_STATUS.APPROVED) throw new Error("INVALID_STATE");
     const completedAt = new Date().toISOString();
-    setAppointments((prev) =>
+    commit((prev) =>
       prev.map((a) => (
         a.id === id
           ? {
@@ -146,12 +209,13 @@ export function AppointmentProvider({ children }) {
     // v9 — Bilinen Teknik Riskler: yazmadan hemen önce güncel durumu kontrol et.
     // Süre-aşımı taraması ile bu tıklama aynı anda gerçekleşmişse ve kayıt zaten
     // "Onaylandı" ise (örn. Admin bu arada onayladıysa), üzerine yazma.
-    const target = appointments.find((a) => a.id === id);
-    if (target && target.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED) {
-      return;
-    }
+    assertRole(staffUser, ROLES.ADMIN, ROLES.STAFF);
+    const target = findOrThrow(id);
+    if (target.status !== APPOINTMENT_STATUS.COMPLETED) throw new Error("INVALID_STATE");
+    if (target.staffApprovalStatus === STAFF_APPROVAL_STATUS.APPROVED) return;
+
     const approvedAt = new Date().toISOString();
-    setAppointments((prev) =>
+    commit((prev) =>
       prev.map((a) =>
         a.id === id
           ? {
@@ -177,30 +241,40 @@ export function AppointmentProvider({ children }) {
   function checkExpiredStaffApprovals() {
     const now = Date.now();
     const thresholdMs = STAFF_APPROVAL_TIMEOUT_HOURS * 60 * 60 * 1000;
-    setAppointments((prev) =>
-      prev.map((a) => {
-        const isExpirable =
-          a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING &&
-          a.completedAt &&
-          now - new Date(a.completedAt).getTime() > thresholdMs;
-        if (!isExpirable) return a;
-        addNotification({
-          type: NOTIFICATION_TYPES.STAFF_APPROVAL_EXPIRED,
-          appointmentId: a.id, customerName: a.fullName, phone: a.phone,
-          amount: a.price, occurredAt: a.completedAt,
-          // v9: "mümkün olduğunca ... hizmet, ilgili Personel ve sürenin dolduğu
-          // tarih/saat bilgileriyle" — bildirime bu ek alanları da taşıyoruz.
-          serviceName: a.serviceName,
-          assignedStaffUsername: a.staffApprovedBy ?? null,
-          expiredAt: new Date(now).toISOString(),
-        });
-        return { ...a, staffApprovalStatus: STAFF_APPROVAL_STATUS.EXPIRED };
+    // 1) Önce hesapla (saf)
+    const expired = appointmentsRef.current.filter(
+      (a) =>
+        a.staffApprovalStatus === STAFF_APPROVAL_STATUS.PENDING &&
+        a.completedAt &&
+        now - new Date(a.completedAt).getTime() > thresholdMs
+    );
+    if (expired.length === 0) return;
+
+    // 2) Sonra yan etki (bildirim)
+    expired.forEach((a) =>
+      addNotification({
+        type: NOTIFICATION_TYPES.STAFF_APPROVAL_EXPIRED,
+        appointmentId: a.id, customerName: a.fullName, phone: a.phone,
+        amount: a.price, occurredAt: a.completedAt, serviceName: a.serviceName,
+        assignedStaffUsername: a.staffApprovedBy ?? null,
+        expiredAt: new Date(now).toISOString(),
       })
+    );
+
+    // 3) En son state güncelle
+    const ids = new Set(expired.map((a) => a.id));
+    commit((prev) =>
+      prev.map((a) => (ids.has(a.id) ? { ...a, staffApprovalStatus: STAFF_APPROVAL_STATUS.EXPIRED } : a))
     );
   }
 
   function cancelAppointment(id, actor) {
-    setAppointments((prev) =>
+    assertRole(actor, ROLES.ADMIN);
+    const t = findOrThrow(id);
+    if (t.status === APPOINTMENT_STATUS.CANCELLED || t.status === APPOINTMENT_STATUS.COMPLETED) {
+      throw new Error("INVALID_STATE");
+    }
+    commit((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: APPOINTMENT_STATUS.CANCELLED } : a))
     );
     logAction({
@@ -211,24 +285,32 @@ export function AppointmentProvider({ children }) {
   }
 
   function deleteAppointment(id, actor) {
+    assertRole(actor, ROLES.ADMIN);
     logAction({
       actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
       actionType: "DELETE_APPOINTMENT", targetTable: "appointments", targetId: id,
       summary: "Randevu kaydı silindi",
     });
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
+    commit((prev) => prev.filter((a) => a.id !== id));
   }
 
   function rescheduleAppointment(id, newDate, newTime, actor) {
+    assertRole(actor, ROLES.ADMIN);
+    assertValidSlot(newDate, newTime);
+    const t = findOrThrow(id);
+    if (t.status !== APPOINTMENT_STATUS.PENDING && t.status !== APPOINTMENT_STATUS.APPROVED) {
+      throw new Error("INVALID_STATE");
+    }
     if (!isDateBookable(newDate)) {
       throw new Error("DATE_CLOSED");
     }
+    if (isPastDateTime(newDate, newTime)) throw new Error("PAST_DATE");
 
     if (isSlotFull(newDate, newTime, id)) {
       throw new Error("SLOT_FULL");
     }
 
-    setAppointments((prev) =>
+    commit((prev) =>
       prev.map((a) => (a.id === id ? { ...a, date: newDate, time: newTime } : a))
     );
     logAction({
@@ -245,8 +327,14 @@ export function AppointmentProvider({ children }) {
   }
 
   /** Admin Isten Ayrilan Personelin Onayladigi Randevu Kayitlarini da Silmek Isterse Cagrilir. */
-  function deleteAppointmentsByStaffUsername(username) {
-    setAppointments((prev) => prev.filter((a) => a.staffApprovedBy !== username));
+  function deleteAppointmentsByStaffUsername(username, actor) {
+    assertRole(actor, ROLES.ADMIN);
+    logAction({
+      actorId: actor.id, actorRole: actor.role, actorUsername: actor.username,
+      actionType: "BULK_DELETE_APPOINTMENTS", targetTable: "appointments", targetId: username,
+      summary: `${username} personeline ait randevu kayıtları silindi`,
+    });
+    commit((prev) => prev.filter((a) => a.staffApprovedBy !== username));
   }
 
   return (

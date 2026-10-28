@@ -26,11 +26,15 @@ export function StaffPanel() {
     function refresh() {
       forceTick((n) => n + 1);
     }
-    const interval = setInterval(refresh, 60 * 1000);
-    document.addEventListener("visibilitychange", () => {
+    function handleVisibility() {
       if (document.visibilityState === "visible") refresh();
-    });
-    return () => clearInterval(interval);
+    }
+    const interval = setInterval(refresh, 60 * 1000);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   // Bölüm 27 (v8): Personel bu tabloda yalnızca müşteri adına veya hizmete göre filtreleyebilir.

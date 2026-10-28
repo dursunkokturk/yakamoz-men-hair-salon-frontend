@@ -32,7 +32,7 @@ export function ServiceForm({ initialValues, onSubmit, onCancel }) {
         label="Hizmet adı"
         placeholder="Örn. Saç Kesimi"
         error={errors.name?.message}
-        {...register("name", { required: "Hizmet adı zorunludur" })}
+        {...register("name", { required: "Hizmet adı zorunludur", maxLength: { value: 60, message: "En fazla 60 karakter" } })}
       />
       <Input
         label="Süre (dakika)"
@@ -41,8 +41,8 @@ export function ServiceForm({ initialValues, onSubmit, onCancel }) {
         step={5}
         error={errors.durationMinutes?.message}
         {...register("durationMinutes", {
-          required: "Süre zorunludur",
-          min: { value: 5, message: "En az 5 dakika olmalı" },
+          required: "Süre zorunludur", valueAsNumber: true,
+          min: { value: 5, message: "En az 5 dakika" }, max: { value: 480, message: "En fazla 480 dakika" }
         })}
       />
       <Input
@@ -52,8 +52,8 @@ export function ServiceForm({ initialValues, onSubmit, onCancel }) {
         step={10}
         error={errors.price?.message}
         {...register("price", {
-          required: "Ücret zorunludur",
-          min: { value: 0, message: "Ücret negatif olamaz" },
+          required: "Ücret zorunludur", valueAsNumber: true,
+          min: { value: 0, message: "Negatif olamaz" }, max: { value: 100000, message: "Çok yüksek" }
         })}
       />
 

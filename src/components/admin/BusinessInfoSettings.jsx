@@ -4,9 +4,11 @@ import { Store } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
+import { useAuth } from "../../context/AuthContext";
 
 export function BusinessInfoSettings() {
   const { settings, updateSettings } = useSettings();
+  const { currentUser } = useAuth();
   const [businessName, setBusinessName] = useState(settings.businessName);
   const [phone, setPhone] = useState(settings.phone);
   const [address, setAddress] = useState(settings.address);
@@ -20,7 +22,7 @@ export function BusinessInfoSettings() {
       businessName: businessName.trim(),
       phone: phone.trim(),
       address: address.trim(),
-    });
+    }, currentUser);
     toast.success("İşletme bilgileri güncellendi");
   }
 

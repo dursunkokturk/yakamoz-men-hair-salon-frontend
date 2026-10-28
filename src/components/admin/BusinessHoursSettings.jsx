@@ -3,14 +3,18 @@ import { CalendarOff } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
 import { Select } from "../ui/Select";
 import { WEEKDAY_LABELS } from "../../utils/dateUtils";
+import { useAuth } from "../../context/AuthContext";
 
 const WEEKDAY_OPTIONS = WEEKDAY_LABELS.map((label, value) => ({ value, label }));
 
 export function BusinessHoursSettings() {
   const { settings, updateSettings } = useSettings();
+  const { currentUser } = useAuth();
 
   function handleChange(e) {
-    updateSettings({ closedWeekday: Number(e.target.value) });
+    updateSettings({
+      closedWeekday: Number(e.target.value)
+    }, currentUser);
     toast.success("Haftalık kapalı gün güncellendi");
   }
 

@@ -49,6 +49,7 @@ export function ClosedDaysManager() {
           <input
             type="text"
             className="ui-field__input"
+            maxLength={80}
             placeholder="Neden (Resmi tatil, bakım, vb.)"
             value={customReason}
             onChange={(e) => setCustomReason(e.target.value)}

@@ -5,16 +5,18 @@ import { toast } from "react-toastify";
 import { Clock3 } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
 import { Button } from "../ui/Button";
+import { useAuth } from "../../context/AuthContext";
 
 export function ApprovalSettings() {
   const { settings, updateSettings } = useSettings();
+  const { currentUser } = useAuth();
   const [bayramMode, setBayramMode] = useState(Boolean(settings.maxAppointmentsPerSlotOverride));
 
   function handleSave() {
     updateSettings({
       // Bölüm 6: bayram modu açıkken azami 2, kapalıyken null (varsayılan: 1)
       maxAppointmentsPerSlotOverride: bayramMode ? 2 : null,
-    });
+    }, currentUser);
     toast.success("Onay ayarları güncellendi");
   }
 

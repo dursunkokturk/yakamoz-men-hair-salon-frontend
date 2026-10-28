@@ -1,25 +1,33 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
+import { ROLES, assertRole } from "../utils/permissions";
+import { generateSalt, hashPassword, safeEqual, newId } from "../utils/crypto";
 
 const AuthContext = createContext(null);
 
 // Backend olmadığı için gerçek bir kimlik sunucusu yok. Bu, demo/portfolyo amaçlı
-// istemci tarafında üretilen, base64 ile kodlanmış sahte bir JWT'dir. Gerçek bir
-// üründe bu doğrulama mutlaka bir backend servisi tarafından yapılmalıdır.
-export const ROLES = { ADMIN: "admin", STAFF: "staff" };
+// istemci tarafında üretilen sahte bir token'dır. Gerçek bir üründe doğrulama
+// mutlaka bir backend servisi tarafından yapılmalıdır.
+export { ROLES };
 
 const DEFAULT_ADMIN_USER = {
   id: "usr-admin",
   username: "admin",
-  password: "yakamoz2026",
+  salt: null,
+  passwordHash: null, // ilk kurulumda belirlenir
   fullName: "Admin",
   role: ROLES.ADMIN,
   isActive: true,
   createdAt: new Date(0).toISOString(),
 };
 
-const TOKEN_TTL_MS = 1000 * 60 * 60 * 8; // 8 saat
+const TOKEN_TTL_MS = 1000 * 60 * 60; // 1 saat
+const MIN_PASSWORD_LENGTH = 10;
+const MAX_ATTEMPTS = 5;
+const LOCK_MS = 15 * 60 * 1000;
+const DUMMY_SALT = "AAAAAAAAAAAAAAAAAAAAAA==";
+const USERNAME_REGEX = /^[a-zA-Z0-9._-]{3,30}$/;
 
 function base64urlEncode(obj) {
   return btoa(JSON.stringify(obj)).replace(/=/g, "");
@@ -33,13 +41,11 @@ function base64urlDecode(str) {
   }
 }
 
+// Token'a rol / isim KONMUYOR: sadece kimlik (sub) ve süre.
 function createFakeToken(user) {
   const header = base64urlEncode({ alg: "none", typ: "JWT" });
   const payload = base64urlEncode({
     sub: user.id,
-    username: user.username,
-    role: user.role,
-    fullName: user.fullName,
     iat: Date.now(),
     exp: Date.now() + TOKEN_TTL_MS,
   });
@@ -51,28 +57,24 @@ function decodeToken(token) {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const payload = base64urlDecode(parts[1]);
-  if (!payload || payload.exp < Date.now()) return null;
+  if (!payload || typeof payload.sub !== "string" || payload.exp < Date.now()) return null;
   return payload;
 }
 
-/** v1 tekli admin kaydını (yakamoz_admin_credentials) yeni yk_users listesine taşır (Bölüm 25 migration mantığı). */
+/** v1 tekli admin kaydını yeni users listesine taşır. Düz metin şifre TAŞINMAZ. */
 function migrateLegacyCredentials() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEYS.USERS_LEGACY_CREDENTIALS);
     if (!raw) return null;
     const legacy = JSON.parse(raw);
-    return {
-      ...DEFAULT_ADMIN_USER,
-      username: legacy.username || DEFAULT_ADMIN_USER.username,
-      password: legacy.password || DEFAULT_ADMIN_USER.password,
-    };
+    window.localStorage.removeItem(STORAGE_KEYS.USERS_LEGACY_CREDENTIALS);
+    return { ...DEFAULT_ADMIN_USER, username: legacy.username || DEFAULT_ADMIN_USER.username };
   } catch {
     return null;
   }
 }
 
 export function AuthProvider({ children }) {
-
   const { logAction } = useAuditLog();
 
   const [users, setUsers] = useState(() => {
@@ -81,98 +83,209 @@ export function AuthProvider({ children }) {
     return [migrateLegacyCredentials() ?? DEFAULT_ADMIN_USER];
   });
 
-  const [token, setToken] = useState(() => loadFromStorage(STORAGE_KEYS.AUTH_TOKEN, null));
+  // Token sessionStorage'da (sekme kapanınca silinir)
+  const [token, setToken] = useState(() => window.sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN));
 
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.USERS, users);
   }, [users]);
 
-  const payload = decodeToken(token);
-  const isAuthenticated = Boolean(payload);
+  // Tek seferlik temizlik: eski sürümden kalan düz şifreler.
+  // - Personel: şifre hash'lenir, düz şifre silinir.
+  // - Admin: eski varsayılan şifre kodda herkese açıktı, bu yüzden TAŞINMAZ; ilk kurulum yeniden istenir.
+  useEffect(() => {
+    window.localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
 
-  const currentUser = payload
-    ? { id: payload.sub, username: payload.username, role: payload.role, fullName: payload.fullName }
+    const legacyUsers = users.filter((u) => typeof u.password === "string");
+    if (legacyUsers.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const migrated = await Promise.all(
+        legacyUsers.map(async (u) => {
+          if (u.role === ROLES.ADMIN) return { id: u.id, salt: null, passwordHash: null };
+          const salt = generateSalt();
+          return { id: u.id, salt, passwordHash: await hashPassword(u.password, salt) };
+        })
+      );
+      if (cancelled) return;
+      setUsers((prev) =>
+        prev.map((u) => {
+          const m = migrated.find((x) => x.id === u.id);
+          if (!m) return u;
+          const { password: _removed, ...rest } = u;
+          return { ...rest, salt: m.salt, passwordHash: m.passwordHash };
+        })
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Rol TOKEN'dan değil, kullanıcı kaydından okunur.
+  const payload = decodeToken(token);
+  const account = payload ? users.find((u) => u.id === payload.sub && u.isActive !== false) : null;
+  const isAuthenticated = Boolean(account);
+  const currentUser = account
+    ? { id: account.id, username: account.username, role: account.role, fullName: account.fullName }
     : null;
 
-  function login(username, password) {
-    const user = users.find(
-      (u) => u.username === username && u.password === password && u.isActive !== false
+  const needsSetup = users.some((u) => u.role === ROLES.ADMIN && !u.passwordHash);
+
+  async function setupAdminPassword(password) {
+    if (!needsSetup) throw new Error("ALREADY_SETUP");
+    if (!password || password.length < MIN_PASSWORD_LENGTH) throw new Error("WEAK_PASSWORD");
+    const salt = generateSalt();
+    const passwordHash = await hashPassword(password, salt);
+    setUsers((prev) =>
+      prev.map((u) => (u.role === ROLES.ADMIN && !u.passwordHash ? { ...u, salt, passwordHash } : u))
     );
-    if (!user) throw new Error("INVALID_CREDENTIALS");
+    logAction({
+      actorUsername: "admin", actionType: "ADMIN_SETUP",
+      targetTable: "users", targetId: "usr-admin", summary: "Admin şifresi ilk kez belirlendi",
+    });
+  }
+
+  async function login(username, password) {
+    const attempts = loadFromStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, {});
+    const rec = attempts[username] ?? { count: 0, lockedUntil: 0 };
+    if (rec.lockedUntil > Date.now()) throw new Error("ACCOUNT_LOCKED");
+
+    // Şifre burada KONTROL EDİLMEZ; sadece kullanıcı aranır
+    const user = users.find((u) => u.username === username && u.isActive !== false);
+
+    // Kullanıcı olmasa bile hash hesaplanır (yanıt süresinden kullanıcı varlığı anlaşılmasın)
+    const hash = await hashPassword(password, user?.salt ?? DUMMY_SALT);
+    const ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
+
+    if (!ok) {
+      const count = rec.count + 1;
+      attempts[username] = { count, lockedUntil: count >= MAX_ATTEMPTS ? Date.now() + LOCK_MS : 0 };
+      saveToStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, attempts);
+      logAction({
+        actorUsername: username, actionType: "LOGIN_FAILED",
+        targetTable: "users", targetId: user?.id ?? "unknown", summary: "Başarısız giriş denemesi",
+      });
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    delete attempts[username];
+    saveToStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, attempts);
+
     const newToken = createFakeToken(user);
     setToken(newToken);
-    saveToStorage(STORAGE_KEYS.AUTH_TOKEN, newToken);
+    window.sessionStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken);
     logAction({
       actorId: user.id, actorRole: user.role, actorUsername: user.username,
       actionType: "LOGIN", targetTable: "users", targetId: user.id,
       summary: `${user.role === ROLES.ADMIN ? "Admin" : "Personel"} girişi yapıldı`,
     });
-    return user;
+    return { id: user.id, username: user.username, role: user.role, fullName: user.fullName };
   }
 
   function logout() {
+    if (currentUser) {
+      logAction({
+        actorId: currentUser.id, actorRole: currentUser.role, actorUsername: currentUser.username,
+        actionType: "LOGOUT", targetTable: "users", targetId: currentUser.id, summary: "Çıkış yapıldı",
+      });
+    }
     setToken(null);
-    saveToStorage(STORAGE_KEYS.AUTH_TOKEN, null);
+    window.sessionStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
   }
 
-  /** Mevcut Sifreyi Dogrulayip Yeni Sifreyi Kaydeder. */
-  function changePassword(currentPassword, newPassword) {
+  async function changePassword(currentPassword, newPassword) {
     const user = users.find((u) => u.id === currentUser?.id);
-    if (!user || currentPassword !== user.password) {
-      throw new Error("WRONG_CURRENT_PASSWORD");
-    }
-    if (!newPassword || newPassword.length < 6) {
+    if (!user || !user.passwordHash) throw new Error("WRONG_CURRENT_PASSWORD");
+    const currentHash = await hashPassword(currentPassword, user.salt);
+    if (!safeEqual(currentHash, user.passwordHash)) throw new Error("WRONG_CURRENT_PASSWORD");
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH || newPassword === currentPassword) {
       throw new Error("WEAK_PASSWORD");
     }
-    setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, password: newPassword } : u)));
+    const salt = generateSalt();
+    const passwordHash = await hashPassword(newPassword, salt);
+    // DÜZ şifre değil, salt + hash kaydedilir
+    setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, salt, passwordHash } : u)));
+    logAction({
+      actorId: user.id, actorRole: user.role, actorUsername: user.username,
+      actionType: "CHANGE_PASSWORD", targetTable: "users", targetId: user.id, summary: "Şifre değiştirildi",
+    });
   }
 
-  // --- Personel Yönetimi (Bölüm 9) — yalnızca Admin panelinden çağrılmalı ---
-  function addStaffUser({ username, password, fullName }) {
-    if (users.some((u) => u.username === username)) throw new Error("USERNAME_TAKEN");
+  // --- Personel Yönetimi: yalnızca Admin ---
+  async function addStaffUser({ username, password, fullName }) {
+    assertRole(currentUser, ROLES.ADMIN);
+    const cleanUsername = String(username ?? "").trim();
+    const cleanFullName = String(fullName ?? "").trim().slice(0, 60);
+    if (!USERNAME_REGEX.test(cleanUsername) || !cleanFullName) throw new Error("INVALID_INPUT");
+    if (!password || password.length < MIN_PASSWORD_LENGTH) throw new Error("WEAK_PASSWORD");
+    if (users.some((u) => u.username === cleanUsername)) throw new Error("USERNAME_TAKEN");
+
+    const salt = generateSalt();
     const newUser = {
-      id: `usr-${Date.now()}`, username, password, fullName,
+      id: newId("usr"), username: cleanUsername, fullName: cleanFullName,
+      salt, passwordHash: await hashPassword(password, salt),
       role: ROLES.STAFF, isActive: true, createdAt: new Date().toISOString(),
     };
     setUsers((prev) => [...prev, newUser]);
     logAction({
-      actorId: currentUser?.id, actorRole: currentUser?.role, actorUsername: currentUser?.username,
+      actorId: currentUser.id, actorRole: currentUser.role, actorUsername: currentUser.username,
       actionType: "CREATE_STAFF", targetTable: "users", targetId: newUser.id,
-      summary: `Personel hesabı oluşturuldu: ${username}`,
+      summary: `Personel hesabı oluşturuldu: ${cleanUsername}`,
     });
-    return newUser;
   }
 
-  function updateStaffUser(id, updates) {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
+  // Sadece isActive değişebilir. { role: "admin" } gibi alanlar YOK SAYILIR.
+  function updateStaffUser(id, { isActive }) {
+    assertRole(currentUser, ROLES.ADMIN);
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id && u.role === ROLES.STAFF ? { ...u, isActive: Boolean(isActive) } : u
+      )
+    );
+    logAction({
+      actorId: currentUser.id, actorRole: currentUser.role, actorUsername: currentUser.username,
+      actionType: "UPDATE_STAFF", targetTable: "users", targetId: id,
+      summary: `Personel ${isActive ? "aktif" : "pasif"} yapıldı`,
+    });
   }
 
   function deleteStaffUser(id, { alsoDeleteHistory = false } = {}) {
+    assertRole(currentUser, ROLES.ADMIN);
     const target = users.find((u) => u.id === id);
+    if (!target || target.role !== ROLES.STAFF) throw new Error("FORBIDDEN"); // admin silinemez
     setUsers((prev) => prev.filter((u) => u.id !== id));
     logAction({
-      actorId: currentUser?.id, actorRole: currentUser?.role, actorUsername: currentUser?.username,
+      actorId: currentUser.id, actorRole: currentUser.role, actorUsername: currentUser.username,
       actionType: "DELETE_STAFF", targetTable: "users", targetId: id,
-      summary: `Personel kaydı silindi: ${target?.username ?? id}${alsoDeleteHistory ? " (geçmiş kayıtlarla birlikte)" : ""}`,
+      summary: `Personel kaydı silindi: ${target.username}${alsoDeleteHistory ? " (geçmiş kayıtlarla birlikte)" : ""}`,
     });
   }
 
-  const staffUsers = users.filter((u) => u.role === ROLES.STAFF);
+  // Hash/salt bilgisi bileşenlere HİÇ verilmez
+  const staffUsers = users
+    .filter((u) => u.role === ROLES.STAFF)
+    .map(({ salt: _s, passwordHash: _h, password: _p, ...safe }) => safe);
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        isAuthenticated, 
-        currentUser, 
-        role: currentUser?.role ?? null, 
-        login, 
-        logout, 
-        changePassword, 
-        users, 
-        staffUsers, 
-        addStaffUser, 
-        updateStaffUser, 
-        deleteStaffUser }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        currentUser,
+        role: currentUser?.role ?? null,
+        needsSetup,
+        setupAdminPassword,
+        login,
+        logout,
+        changePassword,
+        staffUsers,
+        addStaffUser,
+        updateStaffUser,
+        deleteStaffUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
