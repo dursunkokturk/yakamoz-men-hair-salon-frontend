@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
+import { assertRole, ROLES } from "../utils/permissions";
+import { newId } from "../utils/crypto";
 
 const ClosedDayContext = createContext(null);
 
@@ -15,11 +17,13 @@ export function ClosedDayProvider({ children }) {
   }, [closedDays]);
 
   function addClosedDay(date, reason = "", actor) {
+    assertRole(actor, ROLES.ADMIN);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("INVALID_DATE");
     if (closedDays.some((d) => d.date === date)) {
       throw new Error("ALREADY_CLOSED");
     }
 
-    const entry = { id: `cd-${Date.now()}`, date, reason: reason.trim() };
+    const entry = { id: newId("cd"), date, reason: String(reason).trim().slice(0, 80) };
     setClosedDays((prev) => [...prev, entry].sort((a, b) => a.date.localeCompare(b.date)));
 
     logAction({
@@ -32,6 +36,7 @@ export function ClosedDayProvider({ children }) {
   }
 
   function removeClosedDay(id, actor) {
+    assertRole(actor, ROLES.ADMIN);
     const target = closedDays.find((d) => d.id === id);
     setClosedDays((prev) => prev.filter((d) => d.id !== id));
 

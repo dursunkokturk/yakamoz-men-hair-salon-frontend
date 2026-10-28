@@ -3,6 +3,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { newId } from "../utils/crypto";
 
 const NotificationContext = createContext(null);
 
@@ -22,12 +23,12 @@ export function NotificationProvider({ children }) {
 
   function addNotification({ type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt }) {
     const entry = {
-      id: `ntf-${Date.now()}`,
+      id: newId("ntf"),
       type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt,
       createdAt: new Date().toISOString(),
       readAt: null,
     };
-    setNotifications((prev) => [entry, ...prev]);
+    setNotifications((prev) => [entry, ...prev].slice(0, 500));
     return entry;
   }
 

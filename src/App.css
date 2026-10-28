@@ -1072,6 +1072,7 @@ button {
 /* ============ LOOKUP / MY APPOINTMENTS ============ */
 .lookup-form {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
   max-width: 420px;

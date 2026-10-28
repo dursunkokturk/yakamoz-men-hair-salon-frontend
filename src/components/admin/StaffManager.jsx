@@ -10,34 +10,46 @@ import { Modal } from "../ui/Modal";
 import { useAppointments } from "../../context/AppointmentContext";
 
 export function StaffManager() {
-  const { staffUsers, addStaffUser, updateStaffUser, deleteStaffUser } = useAuth();
+  const { currentUser, staffUsers, addStaffUser, updateStaffUser, deleteStaffUser } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState({ fullName: "", username: "", password: "" });
   const { deleteAppointmentsByStaffUsername } = useAppointments();
 
-  function handleAdd() {
-    if (!form.fullName.trim() || !form.username.trim() || form.password.length < 6) {
-      toast.error("Ad soyad, kullanıcı adı ve en az 6 haneli şifre girin");
+  async function handleAdd() {
+    if (!form.fullName.trim() || !form.username.trim() || form.password.length < 10) {
+      toast.error("Ad soyad, kullanıcı adı ve en az 10 haneli şifre girin");
       return;
     }
     try {
-      addStaffUser(form);
+      await addStaffUser(form);
       toast.success("Personel hesabı oluşturuldu");
       setForm({ fullName: "", username: "", password: "" });
       setIsFormOpen(false);
     } catch (err) {
-      toast.error(err.message === "USERNAME_TAKEN" ? "Bu kullanıcı adı zaten kullanılıyor" : "Personel eklenemedi");
+      if (err.message === "USERNAME_TAKEN") toast.error("Bu kullanıcı adı zaten kullanılıyor");
+      else if (err.message === "INVALID_INPUT") toast.error("Kullanıcı adı 3-30 karakter (harf, rakam, . _ -) olmalı");
+      else toast.error("Personel eklenemedi");
+    }
+  }
+
+  function handleToggleActive(staff) {
+    try {
+      updateStaffUser(staff.id, { isActive: !staff.isActive });
+    } catch {
+      toast.error("İşlem yapılamadı (yetkiniz olmayabilir)");
     }
   }
 
   function handleDelete(staff) {
     if (window.confirm(`"${staff.fullName}" personelinin hesabını silmek istiyor musunuz?`)) {
       const alsoDeleteHistory = window.confirm("Geçmiş işlem kayıtları da silinsin mi? (İptal = sadece hesap silinir)");
-      if (alsoDeleteHistory) {
-        deleteAppointmentsByStaffUsername(staff.username);
+      try {
+        if (alsoDeleteHistory) deleteAppointmentsByStaffUsername(staff.username, currentUser);
+        deleteStaffUser(staff.id, { alsoDeleteHistory });
+        toast.info("Personel hesabı silindi");
+      } catch {
+        toast.error("İşlem yapılamadı (yetkiniz olmayabilir)");
       }
-      deleteStaffUser(staff.id, { alsoDeleteHistory });
-      toast.info("Personel hesabı silindi");
     }
   }
 
@@ -60,7 +72,7 @@ export function StaffManager() {
               </span>
             </div>
             <div className="service-manager__item-actions">
-              <button type="button" onClick={() => updateStaffUser(s.id, { isActive: !s.isActive })}>
+              <button type="button" onClick={() => handleToggleActive(s)}>
                 {s.isActive ? "Pasife al" : "Aktif et"}
               </button>
               <button type="button" onClick={() => handleDelete(s)} aria-label="Sil">

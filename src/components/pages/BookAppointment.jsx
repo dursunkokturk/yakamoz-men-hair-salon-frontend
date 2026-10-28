@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import { CheckCircle2 } from "lucide-react";
 import { useServices } from "../../context/ServiceContext";
 import { useAppointments } from "../../context/AppointmentContext";
-import { useBlockedCustomers } from "../../context/BlockedCustomerContext";
 import { useAvailability } from "../../hooks/useAvailability";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
@@ -17,7 +16,6 @@ import { formatDateTR } from "../../utils/dateUtils";
 export function BookAppointment() {
   const { activeServices } = useServices();
   const { createAppointment } = useAppointments();
-  const { isCustomerBlocked } = useBlockedCustomers();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -30,6 +28,7 @@ export function BookAppointment() {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
@@ -47,10 +46,6 @@ export function BookAppointment() {
   function onSubmit(values) {
     const fullName = normalizeName(values.fullName);
 
-    if (isCustomerBlocked(fullName, values.phone.trim())) {
-      toast.error("Bu isimle randevu oluşturulamıyor. Lütfen berberle iletişime geçin.");
-      return;
-    }
     if (!selectedDate) {
       toast.error("Lütfen bir tarih seçin");
       return;
@@ -72,9 +67,6 @@ export function BookAppointment() {
         date: selectedDate,
         time: values.time,
         serviceId: service.id,
-        serviceName: service.name,
-        durationMinutes: service.durationMinutes,
-        price: service.price,
       });
       setConfirmedAppointment(appointment);
       toast.success("Randevunuz alındı, admin onayı bekleniyor");
@@ -83,6 +75,14 @@ export function BookAppointment() {
         toast.error("Bu saat dolu, lütfen başka bir saat seçin");
       } else if (err.message === "DATE_CLOSED") {
         toast.error("İşletme bu tarihte kapalı, lütfen başka bir gün seçin");
+      } else if (err.message === "TOO_MANY_APPOINTMENTS") {
+        toast.error("En fazla 3 aktif randevunuz olabilir");
+      } else if (err.message === "BLOCKED") {
+        toast.error("Bu bilgilerle randevu oluşturulamıyor. Lütfen berberle iletişime geçin.");
+      } else if (err.message === "PAST_DATE") {
+        toast.error("Geçmiş bir saate randevu alınamaz");
+      } else if (err.message === "INVALID_INPUT" || err.message === "INVALID_SERVICE") {
+        toast.error("Girdiğiniz bilgiler geçersiz, lütfen kontrol edin");
       } else {
         toast.error("Randevu oluşturulamadı, tekrar deneyin");
       }
@@ -197,7 +197,12 @@ export function BookAppointment() {
 
           <div className="booking-form__schedule">
             <span className="ui-field__label">Tarih Seçin</span>
-            <Calendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+            <Calendar
+              selectedDate={selectedDate}
+              onSelectDate={(d) => {
+                setSelectedDate(d); setValue("time", "");
+              }}
+            />
 
             {selectedDate && (
               <div className="booking-form__times">

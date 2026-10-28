@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { LogOut, ChevronLeft, ChevronRight, Check, CheckCheck, Ban, Trash2, CalendarClock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useAppointments, APPOINTMENT_STATUS, STAFF_APPROVAL_STATUS } from "../../context/AppointmentContext";
+import { useAppointments, APPOINTMENT_STATUS } from "../../context/AppointmentContext";
 import { useBlockedCustomers } from "../../context/BlockedCustomerContext";
 import { useAvailability } from "../../hooks/useAvailability";
 import { useApprovalWatcher } from "../../hooks/useApprovalWatcher";
@@ -130,38 +130,41 @@ function AppointmentsTab() {
     setRescheduleMode(false);
   }
 
+  function runSafely(action, successMessage, kind = "success") {
+    try {
+      action();
+      toast[kind](successMessage);
+      closeDetail();
+    } catch (err) {
+      toast.error(err.message === "FORBIDDEN" ? "Bu işlem için yetkiniz yok" : "İşlem yapılamadı, kayıt durumu değişmiş olabilir");
+    }
+  }
+
   function handleApprove() {
-    approveAppointment(selectedAppointment.id, currentUser);
-    toast.success("Randevu onaylandı");
-    closeDetail();
+    runSafely(() => approveAppointment(selectedAppointment.id, currentUser), "Randevu onaylandı");
   }
 
   function handleComplete() {
-    completeAppointment(selectedAppointment.id, currentUser);
-    toast.success("Randevu tamamlandı olarak işaretlendi");
-    closeDetail();
+    runSafely(() => completeAppointment(selectedAppointment.id, currentUser), "Randevu tamamlandı olarak işaretlendi");
   }
 
   function handleCancel() {
-    cancelAppointment(selectedAppointment.id, currentUser);
-    toast.info("Randevu iptal edildi");
-    closeDetail();
+    runSafely(() => cancelAppointment(selectedAppointment.id, currentUser), "Randevu iptal edildi");
   }
 
   function handleDelete() {
     if (window.confirm("Bu randevu kaydı silinsin mi?")) {
-      deleteAppointment(selectedAppointment.id, currentUser);
-      toast.info("Randevu silindi");
-      closeDetail();
+      runSafely(() => deleteAppointment(selectedAppointment.id, currentUser), "Randevu silindi", "info");
     }
   }
 
   function handleBlock() {
     if (window.confirm(`${selectedAppointment.fullName} engellensin mi?`)) {
-      blockCustomer(selectedAppointment.fullName, selectedAppointment.phone, "Admin tarafından engellendi", currentUser);
-      cancelAppointment(selectedAppointment.id, currentUser);
-      toast.info("Müşteri engellendi");
-      closeDetail();
+      runSafely(() => {
+        blockCustomer(selectedAppointment.fullName, selectedAppointment.phone, "Admin tarafından engellendi", currentUser);
+        // Zaten iptal/tamamlanmış randevuda iptal hata verir; engelleme yine de kalır
+        try { cancelAppointment(selectedAppointment.id, currentUser); } catch { /* önemli değil */ }
+      }, "Müşteri engellendi", "info");
     }
   }
 
@@ -175,6 +178,8 @@ function AppointmentsTab() {
         toast.error("Seçilen saat dolu");
       } else if (err.message === "DATE_CLOSED") {
         toast.error("Bu tarihte işletme kapalı");
+      } else if (err.message === "PAST_DATE") {
+        toast.error("Geçmiş bir saate randevu alınamaz");
       } else {
         toast.error("Güncelleme başarısız");
       }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
+import { assertRole, ROLES } from "../utils/permissions";
 
 const SettingsContext = createContext(null);
 
@@ -20,6 +21,8 @@ function sanitizeClosedWeekday(value) {
   const n = Number(value);
   return Number.isInteger(n) && n >= 0 && n <= 6 ? n : DEFAULT_SETTINGS.closedWeekday;
 }
+
+const ALLOWED_SETTING_KEYS = ["businessName", "phone", "address", "closedWeekday", "maxAppointmentsPerSlotOverride"];
 
 /**
  * v1 Anahtarinda (yakamoz_settings) Kayitli Eski Veriyi Okur. 
@@ -59,16 +62,29 @@ export function SettingsProvider({ children }) {
     saveToStorage(STORAGE_KEYS.SETTINGS, settings);
   }, [settings]);
 
-  function updateSettings(updates) {
-    setSettings((prev) => ({ ...prev, ...updates }));
-    if (updates.businessName || updates.phone || updates.address) {
-      logAction({
-        actionType: "UPDATE_BUSINESS_INFO",
-        targetTable: "settings",
-        targetId: "business-info",
-        summary: "İşletme bilgileri (ad/telefon/adres) güncellendi",
-      });
+  function updateSettings(updates, actor) {
+    assertRole(actor, ROLES.ADMIN);
+
+    // Sadece izin verilen alanlar ve doğrulanmış değerler
+    const clean = {};
+
+    for (const key of ALLOWED_SETTING_KEYS) {
+      if (key in updates) clean[key] = updates[key];
     }
+    if ("closedWeekday" in clean) clean.closedWeekday = sanitizeClosedWeekday(clean.closedWeekday);
+    if ("maxAppointmentsPerSlotOverride" in clean) {
+      clean.maxAppointmentsPerSlotOverride = Number(clean.maxAppointmentsPerSlotOverride) === 2 ? 2 : null;
+    }
+    for (const key of ["businessName", "phone", "address"]) {
+      if (key in clean) clean[key] = String(clean[key]).trim().slice(0, 120);
+    }
+
+    setSettings((prev) => ({ ...prev, ...clean }));
+    logAction({
+      actorId: actor.id, actorRole: actor.role, actorUsername: actor.username,
+      actionType: "UPDATE_SETTINGS", targetTable: "settings", targetId: "settings",
+      summary: `Ayarlar güncellendi: ${Object.keys(clean).join(", ")}`,
+    });
   }
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useServices } from "../../context/ServiceContext";
 import { APPOINTMENT_STATUS } from "../../context/AppointmentContext";
@@ -14,15 +14,15 @@ const STATUS_OPTIONS = [
   { value: APPOINTMENT_STATUS.CANCELLED, label: "İptal Edildi" },
 ];
 
-const DEFAULT_FILTERS = { status: "all", serviceId: "all", customerName: "" };
-
 /**
  * Randevu listesi için durum / hizmet / müşteri adı filtreleri.
  * Son kullanılan filtreler localStorage'da saklanır (Bölüm 25).
  */
 export function AppointmentFilters({ onChange }) {
   const { services } = useServices();
-  const [filters, setFilters] = useLocalStorage(STORAGE_KEYS.ADMIN_FILTERS, DEFAULT_FILTERS);
+  const [saved, setSaved] = useLocalStorage(STORAGE_KEYS.ADMIN_FILTERS, { status: "all", serviceId: "all" });
+  const [customerName, setCustomerName] = useState("");
+  const filters = { ...saved, customerName };
   const debouncedName = useDebounce(filters.customerName, 300);
 
   useEffect(() => {
@@ -31,59 +31,64 @@ export function AppointmentFilters({ onChange }) {
   }, [filters.status, filters.serviceId, debouncedName]);
 
   function updateFilter(key, value) {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  }
+    if (key === "customerName") setCustomerName(value);
+    else setSaved((prev) => {
+      const { customerName: _old, ...rest } = prev; // eski sürümden kalan kişisel veriyi at
+      return { ...rest, [key]: value };
+    });
 
-  function clearFilters() {
-    setFilters(DEFAULT_FILTERS);
-  }
+    function clearFilters() {
+      setSaved({ status: "all", serviceId: "all" });
+      setCustomerName("");
+    }
 
-  const hasActiveFilters =
-    filters.status !== "all" || filters.serviceId !== "all" || filters.customerName.trim() !== "";
+    const hasActiveFilters =
+      filters.status !== "all" || filters.serviceId !== "all" || filters.customerName.trim() !== "";
 
-  return (
-    <div className="appointment-filters">
-      <div className="appointment-filters__field">
-        <Search size={16} />
-        <input
-          type="text"
-          className="ui-field__input"
-          placeholder="Müşteri adına göre ara..."
-          value={filters.customerName}
-          onChange={(e) => updateFilter("customerName", e.target.value)}
-        />
+    return (
+      <div className="appointment-filters">
+        <div className="appointment-filters__field">
+          <Search size={16} />
+          <input
+            type="text"
+            className="ui-field__input"
+            placeholder="Müşteri adına göre ara..."
+            value={filters.customerName}
+            onChange={(e) => updateFilter("customerName", e.target.value)}
+          />
+        </div>
+
+        <select
+          className="ui-field__input ui-field__select"
+          value={filters.status}
+          onChange={(e) => updateFilter("status", e.target.value)}
+        >
+          {STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="ui-field__input ui-field__select"
+          value={filters.serviceId}
+          onChange={(e) => updateFilter("serviceId", e.target.value)}
+        >
+          <option value="all">Tüm Hizmetler</option>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+
+        {hasActiveFilters && (
+          <button type="button" className="appointment-filters__clear" onClick={clearFilters}>
+            <X size={14} /> Temizle
+          </button>
+        )}
       </div>
-
-      <select
-        className="ui-field__input ui-field__select"
-        value={filters.status}
-        onChange={(e) => updateFilter("status", e.target.value)}
-      >
-        {STATUS_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-
-      <select
-        className="ui-field__input ui-field__select"
-        value={filters.serviceId}
-        onChange={(e) => updateFilter("serviceId", e.target.value)}
-      >
-        <option value="all">Tüm Hizmetler</option>
-        {services.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
-
-      {hasActiveFilters && (
-        <button type="button" className="appointment-filters__clear" onClick={clearFilters}>
-          <X size={14} /> Temizle
-        </button>
-      )}
-    </div>
-  );
+    );
+  }
 }

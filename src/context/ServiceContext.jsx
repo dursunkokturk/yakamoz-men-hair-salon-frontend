@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
+import { assertRole, ROLES } from "../utils/permissions";
+import { newId } from "../utils/crypto";
 
 const ServiceContext = createContext(null);
 
@@ -11,6 +13,19 @@ const DEFAULT_SERVICES = [
   { id: "svc-4", name: "Çocuk Saç Kesimi", durationMinutes: 25, price: 250, isActive: true },
   { id: "svc-5", name: "Fön / Şekillendirme", durationMinutes: 15, price: 150, isActive: true },
 ];
+
+/** Sadece bilinen alanları alır ve değerleri doğrular. Bozuk veri gelirse hata fırlatır. */
+function cleanServiceInput(input) {
+  const name = String(input?.name ?? "").trim().slice(0, 60);
+  const durationMinutes = Number(input?.durationMinutes);
+  const price = Number(input?.price);
+  const valid =
+    name &&
+    Number.isFinite(durationMinutes) && durationMinutes >= 5 && durationMinutes <= 480 &&
+    Number.isFinite(price) && price >= 0 && price <= 100000;
+  if (!valid) throw new Error("INVALID_SERVICE_DATA");
+  return { name, durationMinutes, price, isActive: input.isActive !== false };
+}
 
 export function ServiceProvider({ children }) {
   const { logAction } = useAuditLog();
@@ -23,7 +38,8 @@ export function ServiceProvider({ children }) {
   }, [services]);
 
   function addService(service, actor) {
-    const newService = { ...service, id: `svc-${Date.now()}` };
+    assertRole(actor, ROLES.ADMIN);
+    const newService = { ...cleanServiceInput(service), id: newId("svc") };
     setServices((prev) => [...prev, newService]);
     logAction({
       actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
@@ -34,7 +50,9 @@ export function ServiceProvider({ children }) {
   }
 
   function updateService(id, updates, actor) {
-    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    assertRole(actor, ROLES.ADMIN);
+    const clean = cleanServiceInput(updates);
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, ...clean } : s)));
     logAction({
       actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
       actionType: "UPDATE_SERVICE", targetTable: "services", targetId: id,
@@ -43,6 +61,7 @@ export function ServiceProvider({ children }) {
   }
 
   function deleteService(id, actor) {
+    assertRole(actor, ROLES.ADMIN);
     const target = services.find((s) => s.id === id);
     setServices((prev) => prev.filter((s) => s.id !== id));
     logAction({
@@ -54,6 +73,7 @@ export function ServiceProvider({ children }) {
 
   // Aktif / Pasif toggle
   function toggleServiceStatus(id, actor) {
+    assertRole(actor, ROLES.ADMIN);
     setServices((prev) =>
       prev.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s))
     );

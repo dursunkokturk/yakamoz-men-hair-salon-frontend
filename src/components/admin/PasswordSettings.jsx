@@ -20,16 +20,16 @@ export function PasswordSettings() {
 
   const newPassword = watch("newPassword");
 
-  function onSubmit(values) {
+  async function onSubmit(values) {
     try {
-      changePassword(values.currentPassword, values.newPassword);
+      await changePassword(values.currentPassword, values.newPassword);
       toast.success("Şifreniz güncellendi");
       reset();
     } catch (err) {
       if (err.message === "WRONG_CURRENT_PASSWORD") {
         setError("currentPassword", { message: "Mevcut şifre hatalı" });
       } else if (err.message === "WEAK_PASSWORD") {
-        setError("newPassword", { message: "Şifre en az 6 karakter olmalı" });
+        setError("newPassword", { message: "Şifre en az 10 karakter olmalı ve eskisinden farklı olmalı" });
       } else {
         toast.error("Şifre güncellenemedi, tekrar deneyin");
       }
@@ -55,7 +55,7 @@ export function PasswordSettings() {
           error={errors.newPassword?.message}
           {...register("newPassword", {
             required: "Yeni şifre zorunludur",
-            minLength: { value: 6, message: "Şifre en az 6 karakter olmalı" },
+            minLength: { value: 10, message: "Şifre en az 10 karakter olmalı" },
           })}
         />
         <Input

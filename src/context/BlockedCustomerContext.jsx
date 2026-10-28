@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
-import { nameKey } from "../utils/validation";
 import { useAuditLog } from "./AuditLogContext";
+import { assertRole, ROLES } from "../utils/permissions";
+import { newId } from "../utils/crypto";
 
 const BlockedCustomerContext = createContext(null);
 
@@ -16,11 +17,13 @@ export function BlockedCustomerProvider({ children }) {
   }, [blockedCustomers]);
 
   function blockCustomer(fullName, phone, reason = "", actor) {
+    assertRole(actor, ROLES.ADMIN);
+    if (blockedCustomers.some((b) => b.phone === phone)) return null; // zaten engelli
     const entry = {
-      id: `blk-${Date.now()}`,
-      fullName,
-      phone,
-      reason,
+      id: newId("blk"),
+      fullName: String(fullName).trim().slice(0, 60),
+      phone: String(phone).trim(),
+      reason: String(reason).trim().slice(0, 120),
       blockedAt: new Date().toISOString(),
     };
     setBlockedCustomers((prev) => [...prev, entry]);
@@ -35,6 +38,7 @@ export function BlockedCustomerProvider({ children }) {
   }
 
   function unblockCustomer(id, actor) {
+    assertRole(actor, ROLES.ADMIN);
     const target = blockedCustomers.find((b) => b.id === id);
     setBlockedCustomers((prev) => prev.filter((b) => b.id !== id));
     logAction({
@@ -44,10 +48,9 @@ export function BlockedCustomerProvider({ children }) {
     });
   }
 
-  /** Ad-Soyad ve Telefon kontrolü ile müşterinin engelli listede olup olmadığını döner. */
+  /** Telefon numarasına göre engelli mi? (İsim kolayca değiştirilebildiği için kullanılmaz.) */
   function isCustomerBlocked(fullName, phone) {
-    const key = nameKey(fullName);
-    return blockedCustomers.some((b) => nameKey(b.fullName) === key && b.phone === phone);
+    return blockedCustomers.some((b) => b.phone === String(phone).trim());
   }
 
   return (
