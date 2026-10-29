@@ -53,7 +53,7 @@ function migrateLegacySettings() {
     const legacy = JSON.parse(raw);
     const correctedClosedWeekday =
       legacy.closedWeekday === 2 ? 1 : sanitizeClosedWeekday(legacy.closedWeekday);
-    return { ...DEFAULT_SETTINGS, ...legacy, closedWeekday: correctedClosedWeekday };
+    return { ...legacy, closedWeekday: correctedClosedWeekday };
   } catch {
     return null;
   }
