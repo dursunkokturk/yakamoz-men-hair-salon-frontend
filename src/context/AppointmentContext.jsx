@@ -38,7 +38,11 @@ export function AppointmentProvider({ children }) {
   const { activeServices } = useServices();
   const { isCustomerBlocked } = useBlockedCustomers();
   const [appointments, setAppointments] = useState(function initAppointments() {
-    const stored = loadArray(STORAGE_KEYS.APPOINTMENTS, []);
+    const stored = loadArray(STORAGE_KEYS.APPOINTMENTS, []).filter(
+      (a) =>
+        typeof a.id === "string" && typeof a.date === "string" && typeof a.time === "string" &&
+        typeof a.fullName === "string" && typeof a.serviceName === "string" && typeof a.phone === "string"
+    );
     var fixed = stored.map(function migrateOne(a) {
       var hasLegacyField = Object.prototype.hasOwnProperty.call(a, "STAFF_APPROVAL_STATUS");
       if (a.staffApprovalStatus || !hasLegacyField) {
