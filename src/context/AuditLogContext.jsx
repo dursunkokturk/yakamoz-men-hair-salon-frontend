@@ -6,6 +6,7 @@ import { newId } from "../utils/crypto";
 
 const AuditLogContext = createContext(null);
 const MAX_LOGS = 2000;
+const MAX_ANONYMOUS_LOGS = 300;
 
 export function AuditLogProvider({ children }) {
   const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []));
@@ -21,7 +22,13 @@ export function AuditLogProvider({ children }) {
       actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary,
       timestamp: new Date().toISOString(),
     };
-    setLogs((prev) => [entry, ...prev].slice(0,MAX_LOGS));
+    setLogs((prev) => {
+      const next = [entry, ...prev];
+      if (entry.actorId) return next.slice(0, MAX_LOGS);
+      // Kimliksiz (anonim) kayıtlar: sadece en yeni MAX_ANONYMOUS_LOGS tanesi tutulur
+      let anon = 0;
+      return next.filter((l) => l.actorId || ++anon <= MAX_ANONYMOUS_LOGS).slice(0, MAX_LOGS);
+    });
     return entry;
   }
 

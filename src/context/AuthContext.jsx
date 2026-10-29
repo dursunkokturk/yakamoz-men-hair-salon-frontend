@@ -228,7 +228,7 @@ export function AuthProvider({ children }) {
     const cleanFullName = String(fullName ?? "").trim().slice(0, 60);
     if (!USERNAME_REGEX.test(cleanUsername) || !cleanFullName) throw new Error("INVALID_INPUT");
     if (!password || password.length < MIN_PASSWORD_LENGTH) throw new Error("WEAK_PASSWORD");
-    if (users.some((u) => u.username === cleanUsername)) throw new Error("USERNAME_TAKEN");
+    if (users.some((u) => u.username.toLowerCase() === cleanUsername)) throw new Error("USERNAME_TAKEN");
 
     const salt = generateSalt();
     const newUser = {

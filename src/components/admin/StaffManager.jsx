@@ -44,8 +44,8 @@ export function StaffManager() {
     if (window.confirm(`"${staff.fullName}" personelinin hesabını silmek istiyor musunuz?`)) {
       const alsoDeleteHistory = window.confirm("Geçmiş işlem kayıtları da silinsin mi? (İptal = sadece hesap silinir)");
       try {
-        if (alsoDeleteHistory) deleteAppointmentsByStaffUsername(staff.username, currentUser);
         deleteStaffUser(staff.id, { alsoDeleteHistory });
+        if (alsoDeleteHistory) deleteAppointmentsByStaffUsername(staff.username, currentUser);
         toast.info("Personel hesabı silindi");
       } catch {
         toast.error("İşlem yapılamadı (yetkiniz olmayabilir)");
