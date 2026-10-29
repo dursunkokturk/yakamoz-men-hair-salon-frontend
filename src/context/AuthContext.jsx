@@ -80,8 +80,10 @@ export function AuthProvider({ children }) {
   const [users, setUsers] = useState(() => {
     const stored = loadFromStorage(STORAGE_KEYS.USERS, null);
     const valid = Array.isArray(stored)
-      ? stored.filter((u) => u && typeof u.id === "string" && typeof u.username === "string" && typeof u.role === "string")
-      : [];
+      ? stored.filter(
+        (u) => u && typeof u.id === "string" && typeof u.username === "string" &&
+          (u.role === ROLES.ADMIN || u.role === ROLES.STAFF)
+      ) : [];
     if (valid.some((u) => u.role === ROLES.ADMIN)) return valid;
     if (valid.length > 0) return [DEFAULT_ADMIN_USER, ...valid];
     return [migrateLegacyCredentials() ?? DEFAULT_ADMIN_USER];
