@@ -31,6 +31,8 @@ function LoginForm() {
     } catch (err) {
       if (err.message === "ACCOUNT_LOCKED") {
         setError("root", { message: "Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin." });
+      } else if (err.message === "INSECURE_CONTEXT") {
+        setError("root", { message: "Güvenli bağlantı (HTTPS) gerekli. Siteyi https:// ile açın." });
       } else {
         setError("root", { message: "Kullanıcı adı veya şifre hatalı" });
       }

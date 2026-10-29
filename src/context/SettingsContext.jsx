@@ -24,6 +24,21 @@ function sanitizeClosedWeekday(value) {
 
 const ALLOWED_SETTING_KEYS = ["businessName", "phone", "address", "closedWeekday", "maxAppointmentsPerSlotOverride"];
 
+/** Depodan okunan ham veriyi doğrular: sadece bilinen alanlar, doğru tiplerle. */
+function sanitizeSettings(raw) {
+  const s = raw && typeof raw === "object" ? raw : {};
+  const text = (v, fallback) =>
+    typeof v === "string" && v.trim() ? v.trim().slice(0, 120) : fallback;
+  return {
+    ...DEFAULT_SETTINGS,
+    businessName: text(s.businessName, DEFAULT_SETTINGS.businessName),
+    phone: text(s.phone, DEFAULT_SETTINGS.phone),
+    address: text(s.address, DEFAULT_SETTINGS.address),
+    closedWeekday: sanitizeClosedWeekday(s.closedWeekday),
+    maxAppointmentsPerSlotOverride: Number(s.maxAppointmentsPerSlotOverride) === 2 ? 2 : null,
+  };
+}
+
 /**
  * v1 Anahtarinda (yakamoz_settings) Kayitli Eski Veriyi Okur. 
  * O Surumde closedWeekday Varsayilani Hatali Olarak 2 (Carsamba) idi Ama Yorum
@@ -49,13 +64,9 @@ export function SettingsProvider({ children }) {
 
   const [settings, setSettings] = useState(() => {
     const stored = loadFromStorage(STORAGE_KEYS.SETTINGS, null);
-    if (stored) {
-      // Yeni (v2) anahtarda veri varsa, yine de closedWeekday'i doğrula —
-      // bozuk/aralık dışı bir değer varsayılana döner.
-      return { ...DEFAULT_SETTINGS, ...stored, closedWeekday: sanitizeClosedWeekday(stored.closedWeekday) };
-    }
-    // Yeni anahtar boşsa, eski (v1) anahtarı göç ettir. O da yoksa temiz varsayılan kullanılır.
-    return migrateLegacySettings() ?? DEFAULT_SETTINGS;
+    if (stored) return sanitizeSettings(stored);
+    // Yeni anahtar boşsa eski (v1) anahtarı göç ettir; her durumda doğrulanır.
+    return sanitizeSettings(migrateLegacySettings());
   });
 
   useEffect(() => {

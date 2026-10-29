@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
-import { DEFAULT_MAX_APPOINTMENTS_PER_SLOT, generateTimeSlots, isPastDateTime } from "../utils/dateUtils";
+import { DEFAULT_MAX_APPOINTMENTS_PER_SLOT, generateTimeSlots, isPastDateTime, todayISO } from "../utils/dateUtils";
 import { getDateClosureInfo } from "../utils/scheduling";
 import { useClosedDays } from "./ClosedDayContext";
 import { useSettings } from "./SettingsContext";
@@ -142,6 +142,7 @@ export function AppointmentProvider({ children }) {
 
     const activeCount = appointmentsRef.current.filter(
       (a) => a.phone === phone &&
+        a.date >= todayISO() &&
         (a.status === APPOINTMENT_STATUS.PENDING || a.status === APPOINTMENT_STATUS.APPROVED)
     ).length;
     if (activeCount >= MAX_ACTIVE_PER_PHONE) throw new Error("TOO_MANY_APPOINTMENTS");

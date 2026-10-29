@@ -17,7 +17,7 @@ export function StaffManager() {
 
   async function handleAdd() {
     if (!form.fullName.trim() || !form.username.trim() || form.password.length < 10) {
-      toast.error("Ad soyad, kullanıcı adı ve en az 10 haneli şifre girin");
+      toast.error("Ad soyad, kullanıcı adı ve en az 10 karakterli şifre girin");
       return;
     }
     try {

@@ -34,6 +34,14 @@ export function ClosedDaysManager() {
     }
   }
 
+  function handleRemove(id) {
+    try {
+      removeClosedDay(id, currentUser);
+    } catch {
+      toast.error("İşlem yapılamadı (yetkiniz olmayabilir)");
+    }
+  }
+
   return (
     <div className="closed-days-manager">
       <div className="closed-days-manager__form">
@@ -61,7 +69,7 @@ export function ClosedDaysManager() {
         {closedDays.map((d) => (
           <li key={d.id}>
             <span>{formatDateTR(d.date)} — {d.reason || "Belirtilmedi"}</span>
-            <button onClick={() => removeClosedDay(d.id, currentUser)} aria-label="Sil"><Trash2 size={16} /></button>
+            <button type="button" onClick={() => handleRemove(d.id)} aria-label="Sil"><Trash2 size={16} /></button>
           </li>
         ))}
         {closedDays.length === 0 && <p className="service-manager__empty">Kapalı gün eklenmedi.</p>}

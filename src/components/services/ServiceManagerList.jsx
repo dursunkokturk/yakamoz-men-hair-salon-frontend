@@ -24,29 +24,41 @@ export function ServiceManagerList() {
   }
 
   function handleSubmit(values) {
-    if (editingService) {
-      updateService(editingService.id, values, currentUser);
-      toast.success("Hizmet güncellendi");
-    } else {
-      addService(values, currentUser);
-      toast.success("Hizmet eklendi");
+    try {
+      if (editingService) {
+        updateService(editingService.id, values, currentUser);
+        toast.success("Hizmet güncellendi");
+      } else {
+        addService(values, currentUser);
+        toast.success("Hizmet eklendi");
+      }
+      setIsFormOpen(false);
+    } catch {
+      toast.error("Hizmet kaydedilemedi, bilgileri kontrol edin");
     }
-    setIsFormOpen(false);
   }
 
   function handleDelete(service) {
     if (window.confirm(`"${service.name}" hizmetini silmek istediğinize emin misiniz?`)) {
-      deleteService(service.id, currentUser);
-      toast.info("Hizmet silindi");
+      try {
+        deleteService(service.id, currentUser);
+        toast.info("Hizmet silindi");
+      } catch {
+        toast.error("İşlem yapılamadı (yetkiniz olmayabilir)")
+      }
     }
   }
 
   // Servis Aktif Pasif Bildirimi
   function handleToggle(service) {
-    toggleServiceStatus(service.id, currentUser);
-    toast.info(
-      service.isActive ? `"${service.name}" pasife alındı` : `"${service.name}" aktif edildi`
-    );
+    try {
+      toggleServiceStatus(service.id, currentUser);
+      toast.info(
+        service.isActive ? `"${service.name}" pasife alındı` : `"${service.name}" aktif edildi`
+      );
+    } catch {
+      toast.error("İşlem yapılamadı (yetkiniz olmayabilir)")
+    }
   }
 
   return (
