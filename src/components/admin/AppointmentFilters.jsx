@@ -20,11 +20,14 @@ const STATUS_OPTIONS = [
  */
 export function AppointmentFilters({ onChange }) {
   const { services } = useServices();
-  const [saved, setSaved] = useLocalStorage(STORAGE_KEYS.ADMIN_FILTERS, { status: "all", serviceId: "all" });
+  const [savedRaw, setSaved] = useLocalStorage(STORAGE_KEYS.ADMIN_FILTERS, { status: "all", serviceId: "all" });
+  const saved = savedRaw && typeof savedRaw === "object"
+    ? { status: savedRaw.status ?? "all", serviceId: savedRaw.serviceId ?? "all" }
+    : { status: "all", serviceId: "all" };
 
   // Eski sürümden kalan kişisel veriyi (müşteri adı) bir kez temizle
   useEffect(() => {
-    if ("customerName" in saved) {
+    if ("customerName" && typeof savedRaw === "object" && "customerName" in savedRaw) {
       setSaved(({ customerName: _old, ...rest }) => rest);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
