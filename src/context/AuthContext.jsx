@@ -24,6 +24,7 @@ const DEFAULT_ADMIN_USER = {
 
 const TOKEN_TTL_MS = 1000 * 60 * 60; // 1 saat
 const MIN_PASSWORD_LENGTH = 10;
+const MAX_PASSWORD_LENGTH = 128;
 const MAX_ATTEMPTS = 5;
 const LOCK_MS = 15 * 60 * 1000;
 const DUMMY_SALT = "AAAAAAAAAAAAAAAAAAAAAA==";
@@ -80,8 +81,10 @@ export function AuthProvider({ children }) {
   const [users, setUsers] = useState(() => {
     const stored = loadFromStorage(STORAGE_KEYS.USERS, null);
     const valid = Array.isArray(stored)
-      ? stored.filter((u) => u && typeof u.id === "string" && typeof u.username === "string" && typeof u.role === "string")
-      : [];
+      ? stored.filter(
+        (u) => u && typeof u.id === "string" && typeof u.username === "string" &&
+          (u.role === ROLES.ADMIN || u.role === ROLES.STAFF)
+      ) : [];
     if (valid.some((u) => u.role === ROLES.ADMIN)) return valid;
     if (valid.length > 0) return [DEFAULT_ADMIN_USER, ...valid];
     return [migrateLegacyCredentials() ?? DEFAULT_ADMIN_USER];
@@ -140,7 +143,7 @@ export function AuthProvider({ children }) {
 
   async function setupAdminPassword(password) {
     if (!needsSetup) throw new Error("ALREADY_SETUP");
-    if (!password || password.length < MIN_PASSWORD_LENGTH) throw new Error("WEAK_PASSWORD");
+    if (!password || password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) throw new Error("WEAK_PASSWORD");
     const salt = generateSalt();
     const passwordHash = await hashPassword(password, salt);
     setUsers((prev) =>
@@ -208,7 +211,7 @@ export function AuthProvider({ children }) {
     if (!user || !user.passwordHash) throw new Error("WRONG_CURRENT_PASSWORD");
     const currentHash = await hashPassword(currentPassword, user.salt);
     if (!safeEqual(currentHash, user.passwordHash)) throw new Error("WRONG_CURRENT_PASSWORD");
-    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH || newPassword === currentPassword) {
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH || newPassword === currentPassword) {
       throw new Error("WEAK_PASSWORD");
     }
     const salt = generateSalt();

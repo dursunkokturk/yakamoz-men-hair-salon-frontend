@@ -32,7 +32,7 @@ export function BlockedCustomerProvider({ children }) {
     logAction({
       actorId: actor?.id, actorRole: actor?.role, actorUsername: actor?.username,
       actionType: "BLOCK_CUSTOMER", targetTable: "blockedCustomers", targetId: entry.id,
-      summary: `Müşteri engellendi: ${fullName} (${phone})`,
+      summary: `Müşteri engellendi: ${entry.fullName}`,
     });
 
     return entry;

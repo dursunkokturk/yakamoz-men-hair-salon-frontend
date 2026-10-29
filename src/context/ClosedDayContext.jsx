@@ -9,7 +9,9 @@ const ClosedDayContext = createContext(null);
 export function ClosedDayProvider({ children }) {
   const { logAction } = useAuditLog();
   const [closedDays, setClosedDays] = useState(() =>
-    loadArray(STORAGE_KEYS.CLOSED_DAYS, [])
+    loadArray(STORAGE_KEYS.CLOSED_DAYS, []).filter(
+      (d) => typeof d.id === "string" && typeof d.date === "string"
+    )
   );
 
   useEffect(() => {
