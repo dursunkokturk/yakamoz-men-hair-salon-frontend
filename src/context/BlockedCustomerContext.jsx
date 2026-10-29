@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
 import { assertRole, ROLES } from "../utils/permissions";
 import { newId } from "../utils/crypto";
@@ -9,7 +9,7 @@ const BlockedCustomerContext = createContext(null);
 export function BlockedCustomerProvider({ children }) {
   const { logAction } = useAuditLog();
   const [blockedCustomers, setBlockedCustomers] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.BLOCKED_CUSTOMERS, [])
+    loadArray(STORAGE_KEYS.BLOCKED_CUSTOMERS, [])
   );
 
   useEffect(() => {

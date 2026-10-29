@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
 import { assertRole, ROLES } from "../utils/permissions";
 import { newId } from "../utils/crypto";
@@ -9,7 +9,7 @@ const ClosedDayContext = createContext(null);
 export function ClosedDayProvider({ children }) {
   const { logAction } = useAuditLog();
   const [closedDays, setClosedDays] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.CLOSED_DAYS, [])
+    loadArray(STORAGE_KEYS.CLOSED_DAYS, [])
   );
 
   useEffect(() => {

@@ -21,6 +21,12 @@ export function saveToStorage(key, value) {
   }
 }
 
+/** Depodan dizi okur; dizi değilse veya öğe nesne değilse güvenli varsayılana döner. */
+export function loadArray(key, fallback = []) {
+  const value = loadFromStorage(key, fallback);
+  return Array.isArray(value) ? value.filter((x) => x && typeof x === "object") : fallback;
+}
+
 export const STORAGE_KEYS = {
   APPOINTMENTS: "yakamoz_appointments",
   SERVICES: "yakamoz_services",
