@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
 import { assertRole, ROLES } from "../utils/permissions";
 import { newId } from "../utils/crypto";
@@ -30,7 +30,7 @@ function cleanServiceInput(input) {
 export function ServiceProvider({ children }) {
   const { logAction } = useAuditLog();
   const [services, setServices] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES)
+    loadArray(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES)
   );
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 // Admin'e Bildirim Gonderiliyor
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { newId } from "../utils/crypto";
 
 const NotificationContext = createContext(null);
@@ -14,7 +14,7 @@ export const NOTIFICATION_TYPES = {
 
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.NOTIFICATIONS, [])
+    loadArray(STORAGE_KEYS.NOTIFICATIONS, [])
   );
 
   useEffect(() => {

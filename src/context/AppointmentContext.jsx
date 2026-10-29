@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
+import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { DEFAULT_MAX_APPOINTMENTS_PER_SLOT, generateTimeSlots, isPastDateTime, todayISO } from "../utils/dateUtils";
 import { getDateClosureInfo } from "../utils/scheduling";
 import { useClosedDays } from "./ClosedDayContext";
@@ -38,7 +38,7 @@ export function AppointmentProvider({ children }) {
   const { activeServices } = useServices();
   const { isCustomerBlocked } = useBlockedCustomers();
   const [appointments, setAppointments] = useState(function initAppointments() {
-    const stored = loadFromStorage(STORAGE_KEYS.APPOINTMENTS, []);
+    const stored = loadArray(STORAGE_KEYS.APPOINTMENTS, []);
     var fixed = stored.map(function migrateOne(a) {
       var hasLegacyField = Object.prototype.hasOwnProperty.call(a, "STAFF_APPROVAL_STATUS");
       if (a.staffApprovalStatus || !hasLegacyField) {
