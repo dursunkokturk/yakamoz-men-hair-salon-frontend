@@ -18,11 +18,12 @@ export function BlockedCustomerProvider({ children }) {
 
   function blockCustomer(fullName, phone, reason = "", actor) {
     assertRole(actor, ROLES.ADMIN);
-    if (blockedCustomers.some((b) => b.phone === phone)) return null; // zaten engelli
+    const cleanPhone = String(phone).trim();
+    if (blockedCustomers.some((b) => b.phone === cleanPhone)) return null; // zaten engelli
     const entry = {
       id: newId("blk"),
       fullName: String(fullName).trim().slice(0, 60),
-      phone: String(phone).trim(),
+      phone: cleanPhone,
       reason: String(reason).trim().slice(0, 120),
       blockedAt: new Date().toISOString(),
     };

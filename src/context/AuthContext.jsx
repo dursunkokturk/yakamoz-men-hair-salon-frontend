@@ -79,7 +79,11 @@ export function AuthProvider({ children }) {
 
   const [users, setUsers] = useState(() => {
     const stored = loadFromStorage(STORAGE_KEYS.USERS, null);
-    if (stored && stored.length > 0) return stored;
+    const valid = Array.isArray(stored)
+      ? stored.filter((u) => u && typeof u.id === "string" && typeof u.username === "string" && typeof u.role === "string")
+      : [];
+    if (valid.some((u) => u.role === ROLES.ADMIN)) return valid;
+    if (valid.length > 0) return [DEFAULT_ADMIN_USER, ...valid];
     return [migrateLegacyCredentials() ?? DEFAULT_ADMIN_USER];
   });
 
@@ -149,12 +153,15 @@ export function AuthProvider({ children }) {
   }
 
   async function login(username, password) {
+    if (typeof password !== "string" || password.length > 128) throw new Error("INVALID_CREDENTIALS");
+    const name = String(username ?? "").trim().toLowerCase().slice(0, 30);
+    const attemptKey = `u:${name}`; // "__proto__" gibi anahtarlar sorun çıkarmasın
     const attempts = loadFromStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, {});
-    const rec = attempts[username] ?? { count: 0, lockedUntil: 0 };
+    const rec = attempts[attemptKey] ?? { count: 0, lockedUntil: 0 };
     if (rec.lockedUntil > Date.now()) throw new Error("ACCOUNT_LOCKED");
 
     // Şifre burada KONTROL EDİLMEZ; sadece kullanıcı aranır
-    const user = users.find((u) => u.username === username && u.isActive !== false);
+    const user = users.find((u) => u.username.toLowerCase() === name && u.isActive !== false);
 
     // Kullanıcı olmasa bile hash hesaplanır (yanıt süresinden kullanıcı varlığı anlaşılmasın)
     const hash = await hashPassword(password, user?.salt ?? DUMMY_SALT);
@@ -162,16 +169,16 @@ export function AuthProvider({ children }) {
 
     if (!ok) {
       const count = rec.count + 1;
-      attempts[username] = { count, lockedUntil: count >= MAX_ATTEMPTS ? Date.now() + LOCK_MS : 0 };
+      attempts[attemptKey] = { count, lockedUntil: count >= MAX_ATTEMPTS ? Date.now() + LOCK_MS : 0 };
       saveToStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, attempts);
       logAction({
-        actorUsername: username, actionType: "LOGIN_FAILED",
+        actorUsername: name.slice(0, 30), actionType: "LOGIN_FAILED",
         targetTable: "users", targetId: user?.id ?? "unknown", summary: "Başarısız giriş denemesi",
       });
       throw new Error("INVALID_CREDENTIALS");
     }
 
-    delete attempts[username];
+    delete attempts[attemptKey];
     saveToStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, attempts);
 
     const newToken = createFakeToken(user);
@@ -217,7 +224,7 @@ export function AuthProvider({ children }) {
   // --- Personel Yönetimi: yalnızca Admin ---
   async function addStaffUser({ username, password, fullName }) {
     assertRole(currentUser, ROLES.ADMIN);
-    const cleanUsername = String(username ?? "").trim();
+    const cleanUsername = String(username ?? "").trim().toLowerCase();
     const cleanFullName = String(fullName ?? "").trim().slice(0, 60);
     if (!USERNAME_REGEX.test(cleanUsername) || !cleanFullName) throw new Error("INVALID_INPUT");
     if (!password || password.length < MIN_PASSWORD_LENGTH) throw new Error("WEAK_PASSWORD");

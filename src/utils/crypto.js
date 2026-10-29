@@ -10,6 +10,7 @@ export function generateSalt() {
 
 /** Şifre + tuz → hash. Tarayıcının kendi crypto kütüphanesini kullanır, ek paket gerekmez. */
 export async function hashPassword(password, saltB64) {
+  if (!globalThis.crypto?.subtle) throw new Error("INSECURE_CONTEXT");
   const key = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]
   );
