@@ -27,7 +27,7 @@ export function AppointmentFilters({ onChange }) {
 
   // Eski sürümden kalan kişisel veriyi (müşteri adı) bir kez temizle
   useEffect(() => {
-    if ("customerName" && typeof savedRaw === "object" && "customerName" in savedRaw) {
+    if (savedRaw && typeof savedRaw === "object" && "customerName" in savedRaw) {
       setSaved(({ customerName: _old, ...rest }) => rest);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
