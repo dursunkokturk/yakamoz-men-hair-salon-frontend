@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { useAuditLog } from "./AuditLogContext";
 import { assertRole, ROLES } from "../utils/permissions";
@@ -73,33 +73,37 @@ export function SettingsProvider({ children }) {
     saveToStorage(STORAGE_KEYS.SETTINGS, settings);
   }, [settings]);
 
-  function updateSettings(updates, actor) {
-    assertRole(actor, ROLES.ADMIN);
+  const updateSettings = useCallback((updates, actor) => {
+    function updateSettings(updates, actor) {
+      assertRole(actor, ROLES.ADMIN);
 
-    // Sadece izin verilen alanlar ve doğrulanmış değerler
-    const clean = {};
+      // Sadece izin verilen alanlar ve doğrulanmış değerler
+      const clean = {};
 
-    for (const key of ALLOWED_SETTING_KEYS) {
-      if (key in updates) clean[key] = updates[key];
+      for (const key of ALLOWED_SETTING_KEYS) {
+        if (key in updates) clean[key] = updates[key];
+      }
+      if ("closedWeekday" in clean) clean.closedWeekday = sanitizeClosedWeekday(clean.closedWeekday);
+      if ("maxAppointmentsPerSlotOverride" in clean) {
+        clean.maxAppointmentsPerSlotOverride = Number(clean.maxAppointmentsPerSlotOverride) === 2 ? 2 : null;
+      }
+      for (const key of ["businessName", "phone", "address"]) {
+        if (key in clean) clean[key] = String(clean[key]).trim().slice(0, 120);
+      }
+
+      setSettings((prev) => ({ ...prev, ...clean }));
+      logAction({
+        actorId: actor.id, actorRole: actor.role, actorUsername: actor.username,
+        actionType: "UPDATE_SETTINGS", targetTable: "settings", targetId: "settings",
+        summary: `Ayarlar güncellendi: ${Object.keys(clean).join(", ")}`,
+      });
     }
-    if ("closedWeekday" in clean) clean.closedWeekday = sanitizeClosedWeekday(clean.closedWeekday);
-    if ("maxAppointmentsPerSlotOverride" in clean) {
-      clean.maxAppointmentsPerSlotOverride = Number(clean.maxAppointmentsPerSlotOverride) === 2 ? 2 : null;
-    }
-    for (const key of ["businessName", "phone", "address"]) {
-      if (key in clean) clean[key] = String(clean[key]).trim().slice(0, 120);
-    }
+  }, [logAction]);
 
-    setSettings((prev) => ({ ...prev, ...clean }));
-    logAction({
-      actorId: actor.id, actorRole: actor.role, actorUsername: actor.username,
-      actionType: "UPDATE_SETTINGS", targetTable: "settings", targetId: "settings",
-      summary: `Ayarlar güncellendi: ${Object.keys(clean).join(", ")}`,
-    });
-  }
-
+  const value = useMemo(() => ({ settings, updateSettings }), [settings, updateSettings]);
+  
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings }}>
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

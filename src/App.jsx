@@ -18,7 +18,6 @@ import { Home } from "./components/pages/Home";
 import { Services } from "./components/pages/Services";
 import { BookAppointment } from "./components/pages/BookAppointment";
 import { MyAppointments } from "./components/pages/MyAppointments";
-import { AdminPanel } from "./components/pages/AdminPanel";
 import { Login } from "./components/pages/Login";
 import { NotFound } from "./components/pages/NotFound";
 import { StaffPanel } from "./components/pages/StaffPanel";
@@ -28,7 +27,7 @@ import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
 import { ThemeProvider } from "./context/ThemeContext";
 
-function App() {
+export default function App() {
   return (
     <ThemeProvider>
       <AuditLogProvider>
@@ -91,5 +90,3 @@ function App() {
     </ThemeProvider>
   );
 }
-
-export default App;

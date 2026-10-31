@@ -1,6 +1,6 @@
 // Yapilan Islemlerin Hepsine Tarih, Saat Ekleme Yapiliyor
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { newId } from "../utils/crypto";
 
@@ -16,7 +16,7 @@ export function AuditLogProvider({ children }) {
   }, [logs]);
 
   /** Bölüm 7 & 19: kim, ne zaman, hangi kayıtta, ne işlem yaptı — tek giriş noktası. */
-  function logAction({ actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary }) {
+  const logAction = useCallback(({ actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary }) => {
     const entry = {
       id: newId("log"),
       actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary,
@@ -30,7 +30,7 @@ export function AuditLogProvider({ children }) {
       return next.filter((l) => l.actorId || ++anon <= MAX_ANONYMOUS_LOGS).slice(0, MAX_LOGS);
     });
     return entry;
-  }
+  })
 
   function getLogsByUser(actorId) {
     return logs.filter((l) => l.actorId === actorId);
