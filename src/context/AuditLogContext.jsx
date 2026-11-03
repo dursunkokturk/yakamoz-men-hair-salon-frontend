@@ -7,7 +7,6 @@ import { newId } from "../utils/crypto";
 const AuditLogContext = createContext(null);
 const MAX_LOGS = 2000;
 const MAX_ANONYMOUS_LOGS = 300;
-const value = useMemo(() => ({ logs, logAction }), [logs, logAction]);
 
 export function AuditLogProvider({ children }) {
   const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []));
@@ -33,9 +32,7 @@ export function AuditLogProvider({ children }) {
     return entry;
   }, []);
 
-  function getLogsByUser(actorId) {
-    return logs.filter((l) => l.actorId === actorId);
-  }
+  const value = useMemo(() => ({ logs, logAction }), [logs, logAction]);
 
   return (
     <AuditLogContext.Provider value={value}>
