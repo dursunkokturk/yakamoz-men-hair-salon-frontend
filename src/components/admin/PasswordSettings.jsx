@@ -56,6 +56,7 @@ export function PasswordSettings() {
           {...register("newPassword", {
             required: "Yeni şifre zorunludur",
             minLength: { value: 10, message: "Şifre en az 10 karakter olmalı" },
+            maxLength: { value: 128, message: "En fazla 128 karakter" },
           })}
         />
         <Input
