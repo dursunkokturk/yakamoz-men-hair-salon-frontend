@@ -29,12 +29,13 @@ function cleanServiceInput(input) {
 
 export function ServiceProvider({ children }) {
   const { logAction } = useAuditLog();
-  const [services, setServices] = useState(() =>
-    loadArray(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES).filter(
+  const [services, setServices] = useState(() => {
+    const list = loadArray(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES).filter(
       (s) => typeof s.id === "string" && typeof s.name === "string" &&
         Number.isFinite(s.durationMinutes) && Number.isFinite(s.price)
     )
-  );
+    return list.length ? list : DEFAULT_SERVICES;
+  });
 
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.SERVICES, services);
