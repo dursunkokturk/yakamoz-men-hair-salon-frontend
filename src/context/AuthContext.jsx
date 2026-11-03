@@ -161,8 +161,13 @@ export function AuthProvider({ children }) {
     if (typeof password !== "string" || password.length > MAX_PASSWORD_LENGTH) throw new Error("INVALID_CREDENTIALS");
     const name = String(username ?? "").trim().toLowerCase().slice(0, 30);
     const attemptKey = `u:${name}`; // "__proto__" gibi anahtarlar sorun çıkarmasın
-    const attempts = loadFromStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, {});
-    const rec = attempts[attemptKey] ?? { count: 0, lockedUntil: 0 };
+    const rawAttempts = loadFromStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, {});
+    const attempts = rawAttempts && typeof rawAttempts === "object" && !Array.isArray(rawAttempts) ? rawAttempts : {};
+    const stored = attempts[attemptKey];
+    const rec = {
+      count: Number.isFinite(stored?.count) ? stored.count : 0,
+      lockedUntil: Number.isFinite(stored?.lockedUntil) ? stored.lockedUntil : 0,
+    };
     if (rec.lockedUntil > Date.now()) throw new Error("ACCOUNT_LOCKED");
 
     // Şifre burada KONTROL EDİLMEZ; sadece kullanıcı aranır
