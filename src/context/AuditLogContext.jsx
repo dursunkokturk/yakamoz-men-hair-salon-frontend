@@ -1,6 +1,6 @@
 // Yapilan Islemlerin Hepsine Tarih, Saat Ekleme Yapiliyor
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { newId } from "../utils/crypto";
 
@@ -9,7 +9,7 @@ const MAX_LOGS = 2000;
 const MAX_ANONYMOUS_LOGS = 300;
 
 export function AuditLogProvider({ children }) {
-  const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []));
+  const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []).filter((l) => typeof l.id === "string"));
 
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.ACTION_LOGS, logs);
@@ -19,7 +19,12 @@ export function AuditLogProvider({ children }) {
   const logAction = useCallback(({ actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary }) => {
     const entry = {
       id: newId("log"),
-      actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary,
+      actorId, actorRole,
+      actorUsername: actorUsername ? String(actorUsername).slice(0, 30) : actorUsername,
+      actionType: String(actionType ?? "").slice(0, 40),
+      targetTable: String(targetTable ?? "").slice(0, 40),
+      targetId: String(targetId ?? "").slice(0, 80),
+      summary: String(summary ?? "").slice(0, 200),
       timestamp: new Date().toISOString(),
     };
     setLogs((prev) => {
@@ -30,14 +35,12 @@ export function AuditLogProvider({ children }) {
       return next.filter((l) => l.actorId || ++anon <= MAX_ANONYMOUS_LOGS).slice(0, MAX_LOGS);
     });
     return entry;
-  })
+  }, []);
 
-  function getLogsByUser(actorId) {
-    return logs.filter((l) => l.actorId === actorId);
-  }
+  const value = useMemo(() => ({ logs, logAction }), [logs, logAction]);
 
   return (
-    <AuditLogContext.Provider value={{ logs, logAction, getLogsByUser }}>
+    <AuditLogContext.Provider value={value}>
       {children}
     </AuditLogContext.Provider>
   );

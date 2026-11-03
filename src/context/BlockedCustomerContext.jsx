@@ -9,7 +9,7 @@ const BlockedCustomerContext = createContext(null);
 export function BlockedCustomerProvider({ children }) {
   const { logAction } = useAuditLog();
   const [blockedCustomers, setBlockedCustomers] = useState(() =>
-    loadArray(STORAGE_KEYS.BLOCKED_CUSTOMERS, [])
+    loadArray(STORAGE_KEYS.BLOCKED_CUSTOMERS, []).filter((b) => typeof b.id === "string" && typeof b.phone === "string")
   );
 
   useEffect(() => {

@@ -16,16 +16,18 @@ export function MyAppointments() {
 
   const results = searched
     ? appointments
-      .filter((a) => a.phone === searched.phone && nameKey(a.fullName)=== searched.key)
+      .filter((a) => a.phone === searched.phone && nameKey(a.fullName) === searched.key)
       .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
     : [];
 
   const canSearch = isValidPhone(phone) && isValidName(name);
 
+  const [lastSearchAt, setLastSearchAt] = useState(0);
+
   function handleSearch(e) {
     e.preventDefault();
-    if (!canSearch) return;
-    setSearched({ phone: phone.trim(), key:nameKey(name) });
+    if (!canSearch || Date.now() - lastSearchAt < 2000) return;
+    setLastSearchAt(Date.now());
   }
 
   return (

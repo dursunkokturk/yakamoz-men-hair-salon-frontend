@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { Spinner } from "./components/ui/Spinner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,12 +22,20 @@ import { BookAppointment } from "./components/pages/BookAppointment";
 import { MyAppointments } from "./components/pages/MyAppointments";
 import { Login } from "./components/pages/Login";
 import { NotFound } from "./components/pages/NotFound";
-import { StaffPanel } from "./components/pages/StaffPanel";
-import { StaffTracking } from "./components/pages/StaffTracking";
 
 import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
 import { ThemeProvider } from "./context/ThemeContext";
+
+const AdminPanel = lazy(() =>
+  import("./components/pages/AdminPanel").then((m) => ({ default: m.AdminPanel }))
+);
+const StaffPanel = lazy(() =>
+  import("./components/pages/StaffPanel").then((m) => ({ default: m.StaffPanel }))
+);
+const StaffTracking = lazy(() =>
+  import("./components/pages/StaffTracking").then((m) => ({ default: m.StaffTracking }))
+);
 
 export default function App() {
   return (
@@ -42,38 +52,40 @@ export default function App() {
                         <div className="app-shell">
                           <Header />
                           <main className="app-main">
-                            <Routes>
-                              <Route path="/" element={<Home />} />
-                              <Route path="/hizmetler" element={<Services />} />
-                              <Route path="/randevu-al" element={<BookAppointment />} />
-                              <Route path="/randevularim" element={<MyAppointments />} />
-                              <Route path="/giris" element={<Login />} />
-                              <Route
-                                path="/staff"
-                                element={
-                                  <ProtectedRoute allowedRoles={["staff"]}>
-                                    <StaffPanel />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/staff/tracking"
-                                element={
-                                  <ProtectedRoute allowedRoles={["staff","admin"]}>
-                                    <StaffTracking />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/admin"
-                                element={
-                                  <ProtectedRoute allowedRoles={["admin"]}>
-                                    <AdminPanel />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route path="*" element={<NotFound />} />
-                            </Routes>
+                            <Suspense fallback={<Spinner />}>
+                              <Routes>
+                                <Route path="/" element={<Home />} />
+                                <Route path="/hizmetler" element={<Services />} />
+                                <Route path="/randevu-al" element={<BookAppointment />} />
+                                <Route path="/randevularim" element={<MyAppointments />} />
+                                <Route path="/giris" element={<Login />} />
+                                <Route
+                                  path="/staff"
+                                  element={
+                                    <ProtectedRoute allowedRoles={["staff"]}>
+                                      <StaffPanel />
+                                    </ProtectedRoute>
+                                  }
+                                />
+                                <Route
+                                  path="/staff/tracking"
+                                  element={
+                                    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                                      <StaffTracking />
+                                    </ProtectedRoute>
+                                  }
+                                />
+                                <Route
+                                  path="/admin"
+                                  element={
+                                    <ProtectedRoute allowedRoles={["admin"]}>
+                                      <AdminPanel />
+                                    </ProtectedRoute>
+                                  }
+                                />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </Suspense>
                           </main>
                           <Footer />
                         </div>

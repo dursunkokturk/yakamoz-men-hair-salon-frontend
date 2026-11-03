@@ -41,7 +41,10 @@ export function AppointmentProvider({ children }) {
     const stored = loadArray(STORAGE_KEYS.APPOINTMENTS, []).filter(
       (a) =>
         typeof a.id === "string" && typeof a.date === "string" && typeof a.time === "string" &&
-        typeof a.fullName === "string" && typeof a.serviceName === "string" && typeof a.phone === "string"
+        typeof a.fullName === "string" && a.fullName.length <= 60 &&
+        typeof a.serviceName === "string" && a.serviceName.length <= 60 &&
+        typeof a.phone === "string" && a.phone.length <= 20 &&
+        Object.values(APPOINTMENT_STATUS).includes(a.status)
     );
     var fixed = stored.map(function migrateOne(a) {
       var hasLegacyField = Object.prototype.hasOwnProperty.call(a, "STAFF_APPROVAL_STATUS");
