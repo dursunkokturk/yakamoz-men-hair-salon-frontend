@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,8 +21,6 @@ import { BookAppointment } from "./components/pages/BookAppointment";
 import { MyAppointments } from "./components/pages/MyAppointments";
 import { Login } from "./components/pages/Login";
 import { NotFound } from "./components/pages/NotFound";
-import { AdminPanel } from "./components/pages/AdminPanel";
-import { lazy, Suspense } from "react";
 import { Spinner } from "./components/ui/Spinner";
 
 import "./App.css";
