@@ -19,7 +19,12 @@ export function AuditLogProvider({ children }) {
   const logAction = useCallback(({ actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary }) => {
     const entry = {
       id: newId("log"),
-      actorId, actorRole, actorUsername, actionType, targetTable, targetId, summary,
+      actorId, actorRole,
+      actorUsername: actorUsername ? String(actorUsername).slice(0, 30) : actorUsername,
+      actionType: String(actionType ?? "").slice(0, 40),
+      targetTable: String(targetTable ?? "").slice(0, 40),
+      targetId: String(targetId ?? "").slice(0, 80),
+      summary: String(summary ?? "").slice(0, 200),
       timestamp: new Date().toISOString(),
     };
     setLogs((prev) => {
