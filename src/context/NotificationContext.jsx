@@ -14,7 +14,7 @@ export const NOTIFICATION_TYPES = {
 
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState(() =>
-    loadArray(STORAGE_KEYS.NOTIFICATIONS, [])
+    loadArray(STORAGE_KEYS.NOTIFICATIONS, []).filter((n) => typeof n.id === "string")
   );
 
   useEffect(() => {
