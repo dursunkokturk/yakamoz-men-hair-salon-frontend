@@ -83,7 +83,9 @@ export function AuthProvider({ children }) {
     const valid = Array.isArray(stored)
       ? stored.filter(
         (u) => u && typeof u.id === "string" && typeof u.username === "string" &&
-          (u.role === ROLES.ADMIN || u.role === ROLES.STAFF)
+          (u.role === ROLES.ADMIN || u.role === ROLES.STAFF) &&
+          (u.salt === null || typeof u.salt === "string") &&
+          (u.passwordHash === null || typeof u.passwordHash === "string")
       ) : [];
     if (valid.some((u) => u.role === ROLES.ADMIN)) return valid;
     if (valid.length > 0) return [DEFAULT_ADMIN_USER, ...valid];
@@ -156,7 +158,7 @@ export function AuthProvider({ children }) {
   }
 
   async function login(username, password) {
-    if (typeof password !== "string" || password.length > 128) throw new Error("INVALID_CREDENTIALS");
+    if (typeof password !== "string" || password.length > MAX_PASSWORD_LENGTH) throw new Error("INVALID_CREDENTIALS");
     const name = String(username ?? "").trim().toLowerCase().slice(0, 30);
     const attemptKey = `u:${name}`; // "__proto__" gibi anahtarlar sorun çıkarmasın
     const attempts = loadFromStorage(STORAGE_KEYS.LOGIN_ATTEMPTS, {});
@@ -166,9 +168,14 @@ export function AuthProvider({ children }) {
     // Şifre burada KONTROL EDİLMEZ; sadece kullanıcı aranır
     const user = users.find((u) => u.username.toLowerCase() === name && u.isActive !== false);
 
-    // Kullanıcı olmasa bile hash hesaplanır (yanıt süresinden kullanıcı varlığı anlaşılmasın)
-    const hash = await hashPassword(password, user?.salt ?? DUMMY_SALT);
-    const ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
+    let ok = false;
+    try {
+      // Kullanıcı olmasa bile hash hesaplanır (yanıt süresinden kullanıcı varlığı anlaşılmasın)
+      const hash = await hashPassword(password, user?.salt ?? DUMMY_SALT);
+      const ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
+    } catch (err) {
+      if (err.message === "INSECURE_CONTEXT") throw err;
+    }
 
     if (!ok) {
       const count = rec.count + 1;
