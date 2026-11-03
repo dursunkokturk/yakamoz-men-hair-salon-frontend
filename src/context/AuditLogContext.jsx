@@ -1,12 +1,13 @@
 // Yapilan Islemlerin Hepsine Tarih, Saat Ekleme Yapiliyor
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { newId } from "../utils/crypto";
 
 const AuditLogContext = createContext(null);
 const MAX_LOGS = 2000;
 const MAX_ANONYMOUS_LOGS = 300;
+const value = useMemo(() => ({ logs, logAction }), [logs, logAction]);
 
 export function AuditLogProvider({ children }) {
   const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []));
@@ -30,14 +31,14 @@ export function AuditLogProvider({ children }) {
       return next.filter((l) => l.actorId || ++anon <= MAX_ANONYMOUS_LOGS).slice(0, MAX_LOGS);
     });
     return entry;
-  })
+  }, []);
 
   function getLogsByUser(actorId) {
     return logs.filter((l) => l.actorId === actorId);
   }
 
   return (
-    <AuditLogContext.Provider value={{ logs, logAction, getLogsByUser }}>
+    <AuditLogContext.Provider value={value}>
       {children}
     </AuditLogContext.Provider>
   );
