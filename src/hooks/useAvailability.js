@@ -26,8 +26,15 @@ export function useAvailability(dateISO) {
     }
 
     const capacity = getSlotCapacity();
+
+    const counts = {};
+
+    for (const a of appointmens) {
+      if (a.date === dateISO && a.status !== "cancelled") counts[a.time] = (counts[a.time] ?? 0) + 1;
+    }
+
     const slots = generateTimeSlots().map((time) => {
-      const takenCount = countActiveAppointmentsAt(dateISO, time);
+      const takenCount = counts[time] ?? 0;
       const isPast = isPastDateTime(dateISO, time);
       return {
         time,
