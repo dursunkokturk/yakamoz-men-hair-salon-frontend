@@ -1,7 +1,7 @@
 // Musterinin Islemini Bitiren Personel Belirtilen Sure Icinde Sistem Uzerinden Onay Vermez Ise 
 // Admin'e Bildirim Gonderiliyor
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { loadArray, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 import { newId } from "../utils/crypto";
 
@@ -21,22 +21,29 @@ export function NotificationProvider({ children }) {
     saveToStorage(STORAGE_KEYS.NOTIFICATIONS, notifications);
   }, [notifications]);
 
-  function addNotification({ type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt }) {
+  const addNotification = useCallback(() => ({ type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt }) => {
     const entry = {
       id: newId("ntf"),
-      type, appointmentId, customerName, phone, amount, occurredAt, serviceName, assignedStaffUsername, expiredAt,
+      type, appointmentId,
+      customerName,
+      phone,
+      amount,
+      occurredAt,
+      serviceName,
+      assignedStaffUsername,
+      expiredAt,
       createdAt: new Date().toISOString(),
       readAt: null,
     };
     setNotifications((prev) => [entry, ...prev].slice(0, 500));
     return entry;
-  }
+  }, []);
 
-  function markAsRead(id) {
+  const markAsRead = useCallback((id)=>{
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
     );
-  }
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 

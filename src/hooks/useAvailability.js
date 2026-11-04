@@ -10,7 +10,7 @@ import { generateTimeSlots, isPastDateTime } from "../utils/dateUtils";
  * Salı günleri ve geçmiş saatler otomatik olarak pasif sayılır.
  */
 export function useAvailability(dateISO) {
-  const { countActiveAppointmentsAt, getSlotCapacity } = useAppointments();
+  const { appointmens, countActiveAppointmentsAt, getSlotCapacity } = useAppointments();
   const { isDateClosed, getClosedDayInfo } = useClosedDays();
   const { settings } = useSettings();
 
@@ -26,8 +26,15 @@ export function useAvailability(dateISO) {
     }
 
     const capacity = getSlotCapacity();
+
+    const counts = {};
+
+    for (const a of appointmens) {
+      if (a.date === dateISO && a.status !== "cancelled") counts[a.time] = (counts[a.time] ?? 0) + 1;
+    }
+
     const slots = generateTimeSlots().map((time) => {
-      const takenCount = countActiveAppointmentsAt(dateISO, time);
+      const takenCount = counts[time] ?? 0;
       const isPast = isPastDateTime(dateISO, time);
       return {
         time,
@@ -39,5 +46,5 @@ export function useAvailability(dateISO) {
       };
     });
     return { isOpen: true, slots, closedReason: null };
-  }, [dateISO, countActiveAppointmentsAt, isDateClosed, getClosedDayInfo, settings.closedWeekday]);
+  }, [dateISO, appointmens, countActiveAppointmentsAt, isDateClosed, getClosedDayInfo, settings.closedWeekday]);
 }
