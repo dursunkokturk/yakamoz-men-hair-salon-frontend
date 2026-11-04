@@ -177,7 +177,7 @@ export function AuthProvider({ children }) {
     try {
       // Kullanıcı olmasa bile hash hesaplanır (yanıt süresinden kullanıcı varlığı anlaşılmasın)
       const hash = await hashPassword(password, user?.salt ?? DUMMY_SALT);
-      const ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
+      ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
     } catch (err) {
       if (err.message === "INSECURE_CONTEXT") throw err;
     }
