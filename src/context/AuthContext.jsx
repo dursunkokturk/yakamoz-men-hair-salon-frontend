@@ -47,6 +47,7 @@ function createFakeToken(user) {
   const header = base64urlEncode({ alg: "none", typ: "JWT" });
   const payload = base64urlEncode({
     sub: user.id,
+    pv: user.passwordHash ? user.passwordHash.slice(0, 8) : "",
     iat: Date.now(),
     exp: Date.now() + TOKEN_TTL_MS,
   });
@@ -85,7 +86,8 @@ export function AuthProvider({ children }) {
         (u) => u && typeof u.id === "string" && typeof u.username === "string" &&
           (u.role === ROLES.ADMIN || u.role === ROLES.STAFF) &&
           (u.salt === null || typeof u.salt === "string") &&
-          (u.passwordHash === null || typeof u.passwordHash === "string")
+          (u.passwordHash === null || typeof u.passwordHash === "string") &&
+          typeof u.fullName === "string"
       ) : [];
     if (valid.some((u) => u.role === ROLES.ADMIN)) return valid;
     if (valid.length > 0) return [DEFAULT_ADMIN_USER, ...valid];
@@ -135,7 +137,13 @@ export function AuthProvider({ children }) {
 
   // Rol TOKEN'dan değil, kullanıcı kaydından okunur.
   const payload = decodeToken(token);
-  const account = payload ? users.find((u) => u.id === payload.sub && u.isActive !== false) : null;
+  const account = payload
+    ? users.find(
+      (u) =>
+        u.id === payload.sub &&
+        u.isActive !== false &&
+        (payload.pv ?? "") === (u.passwordHash ? u.passwordHash.slice(0, 8) : ""))
+    : null;
   const isAuthenticated = Boolean(account);
   const currentUser = account
     ? { id: account.id, username: account.username, role: account.role, fullName: account.fullName }
@@ -177,7 +185,7 @@ export function AuthProvider({ children }) {
     try {
       // Kullanıcı olmasa bile hash hesaplanır (yanıt süresinden kullanıcı varlığı anlaşılmasın)
       const hash = await hashPassword(password, user?.salt ?? DUMMY_SALT);
-      const ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
+      ok = Boolean(user?.passwordHash) && safeEqual(hash, user.passwordHash);
     } catch (err) {
       if (err.message === "INSECURE_CONTEXT") throw err;
     }
@@ -230,6 +238,9 @@ export function AuthProvider({ children }) {
     const passwordHash = await hashPassword(newPassword, salt);
     // DÜZ şifre değil, salt + hash kaydedilir
     setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, salt, passwordHash } : u)));
+    const refreshed = createFakeToken({ ...user, passwordHash });
+    setToken(refreshed);
+    window.sessionStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, refreshed);
     logAction({
       actorId: user.id, actorRole: user.role, actorUsername: user.username,
       actionType: "CHANGE_PASSWORD", targetTable: "users", targetId: user.id, summary: "Şifre değiştirildi",

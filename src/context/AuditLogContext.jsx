@@ -9,7 +9,7 @@ const MAX_LOGS = 2000;
 const MAX_ANONYMOUS_LOGS = 300;
 
 export function AuditLogProvider({ children }) {
-  const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []).filter((l) => typeof l.id === "string"));
+  const [logs, setLogs] = useState(() => loadArray(STORAGE_KEYS.ACTION_LOGS, []).filter((l) => typeof l.id === "string" &&typeof l.timestamp==="string"));
 
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.ACTION_LOGS, logs);
