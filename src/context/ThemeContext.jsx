@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "../utils/storage";
 
 const ThemeContext = createContext(null);
@@ -24,12 +24,14 @@ export function ThemeProvider({ children }) {
     saveToStorage(STORAGE_KEYS.THEME, theme);
   }, [theme]);
 
-  function toggleTheme() {
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK));
-  }
+  }, []);
+
+  const value = useMemo(() => ({ theme, toggleTheme, isDark: theme === THEMES.DARK }), [theme, toggleTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === THEMES.DARK }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
