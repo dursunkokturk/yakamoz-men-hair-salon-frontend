@@ -47,6 +47,7 @@ function createFakeToken(user) {
   const header = base64urlEncode({ alg: "none", typ: "JWT" });
   const payload = base64urlEncode({
     sub: user.id,
+    pv: user.passwordHash ? user.passwordHash.slice(0, 8) : "",
     iat: Date.now(),
     exp: Date.now() + TOKEN_TTL_MS,
   });
@@ -135,7 +136,13 @@ export function AuthProvider({ children }) {
 
   // Rol TOKEN'dan değil, kullanıcı kaydından okunur.
   const payload = decodeToken(token);
-  const account = payload ? users.find((u) => u.id === payload.sub && u.isActive !== false) : null;
+  const account = payload
+    ? users.find(
+      (u) =>
+        u.id === payload.sub &&
+        u.isActive !== false &&
+        (payload.pv ?? "") === (u.passwordHash ? u.passwordHash.slice(0, 8) : ""))
+    : null;
   const isAuthenticated = Boolean(account);
   const currentUser = account
     ? { id: account.id, username: account.username, role: account.role, fullName: account.fullName }
