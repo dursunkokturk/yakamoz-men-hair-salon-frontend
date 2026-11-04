@@ -86,7 +86,8 @@ export function AuthProvider({ children }) {
         (u) => u && typeof u.id === "string" && typeof u.username === "string" &&
           (u.role === ROLES.ADMIN || u.role === ROLES.STAFF) &&
           (u.salt === null || typeof u.salt === "string") &&
-          (u.passwordHash === null || typeof u.passwordHash === "string")
+          (u.passwordHash === null || typeof u.passwordHash === "string") &&
+          typeof u.fullName === "string"
       ) : [];
     if (valid.some((u) => u.role === ROLES.ADMIN)) return valid;
     if (valid.length > 0) return [DEFAULT_ADMIN_USER, ...valid];
