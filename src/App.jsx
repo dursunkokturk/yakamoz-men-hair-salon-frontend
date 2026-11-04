@@ -38,6 +38,12 @@ const StaffTracking = lazy(() =>
   import("./components/pages/StaffTracking").then((m) => ({ default: m.StaffTracking }))
 );
 
+// App.jsx içinde, App'in dışında
+function ThemedToastContainer() {
+  const { isDark } = useTheme();
+  return <ToastContainer position="top-center" autoClose={3500} theme={isDark ? "dark" : "light"} />;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -90,7 +96,7 @@ export default function App() {
                           </main>
                           <Footer />
                         </div>
-                        <ToastContainer position="top-center" autoClose={3500} theme="dark" />
+                        <ThemedToastContainer />
                       </BrowserRouter>
                     </AppointmentProvider>
                   </ClosedDayProvider>
