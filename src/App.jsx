@@ -26,6 +26,7 @@ import { NotFound } from "./components/pages/NotFound";
 import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ROLES } from "./utils/permissions";
 
 const AdminPanel = lazy(() =>
   import("./components/pages/AdminPanel").then((m) => ({ default: m.AdminPanel }))
@@ -70,7 +71,7 @@ export default function App() {
                                 <Route
                                   path="/staff/tracking"
                                   element={
-                                    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                                    <ProtectedRoute allowedRoles={[ROLES.STAFF, ROLES.ADMIN]}>
                                       <StaffTracking />
                                     </ProtectedRoute>
                                   }
