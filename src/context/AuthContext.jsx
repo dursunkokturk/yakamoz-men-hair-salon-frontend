@@ -237,6 +237,9 @@ export function AuthProvider({ children }) {
     const passwordHash = await hashPassword(newPassword, salt);
     // DÜZ şifre değil, salt + hash kaydedilir
     setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, salt, passwordHash } : u)));
+    const refreshed = createFakeToken({ ...user, passwordHash });
+    setToken(refreshed);
+    window.sessionStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, refreshed);
     logAction({
       actorId: user.id, actorRole: user.role, actorUsername: user.username,
       actionType: "CHANGE_PASSWORD", targetTable: "users", targetId: user.id, summary: "Şifre değiştirildi",
