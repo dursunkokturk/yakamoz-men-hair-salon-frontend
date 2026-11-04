@@ -28,6 +28,7 @@ export function MyAppointments() {
     e.preventDefault();
     if (!canSearch || Date.now() - lastSearchAt < 2000) return;
     setLastSearchAt(Date.now());
+    setSearched({ phone: phone.trim(), key: nameKey(name) });
   }
 
   return (
