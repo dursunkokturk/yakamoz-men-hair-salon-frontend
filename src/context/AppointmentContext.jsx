@@ -37,12 +37,12 @@ export const STAFF_APPROVAL_STATUS = {
 export function AppointmentProvider({ children }) {
   const { activeServices } = useServices();
   const { isCustomerBlocked } = useBlockedCustomers();
-  const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [appointments, setAppointments] = useState(function initAppointments() {
+    const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const stored = loadArray(STORAGE_KEYS.APPOINTMENTS, []).filter(
       (a) =>
-        a.date >= cutoff &&
         typeof a.id === "string" && typeof a.date === "string" && typeof a.time === "string" &&
+        a.date >= cutoff &&
         typeof a.fullName === "string" && a.fullName.length <= 60 &&
         typeof a.serviceName === "string" && a.serviceName.length <= 60 &&
         typeof a.phone === "string" && a.phone.length <= 20 &&
