@@ -25,7 +25,7 @@ import { NotFound } from "./components/pages/NotFound";
 
 import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { ROLES } from "./utils/permissions";
 import { ErrorBoundary } from "./components/layout/ErrorBoundary";
 
