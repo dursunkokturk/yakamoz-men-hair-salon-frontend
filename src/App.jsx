@@ -27,6 +27,7 @@ import "./App.css";
 import { ClosedDayProvider } from "./context/ClosedDayContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ROLES } from "./utils/permissions";
+import { ErrorBoundary } from "./components/layout/ErrorBoundary";
 
 const AdminPanel = lazy(() =>
   import("./components/pages/AdminPanel").then((m) => ({ default: m.AdminPanel }))
@@ -58,40 +59,42 @@ export default function App() {
                         <div className="app-shell">
                           <Header />
                           <main className="app-main">
-                            <Suspense fallback={<Spinner />}>
-                              <Routes>
-                                <Route path="/" element={<Home />} />
-                                <Route path="/hizmetler" element={<Services />} />
-                                <Route path="/randevu-al" element={<BookAppointment />} />
-                                <Route path="/randevularim" element={<MyAppointments />} />
-                                <Route path="/giris" element={<Login />} />
-                                <Route
-                                  path="/staff"
-                                  element={
-                                    <ProtectedRoute allowedRoles={[ROLES.STAFF]}>
-                                      <StaffPanel />
-                                    </ProtectedRoute>
-                                  }
-                                />
-                                <Route
-                                  path="/staff/tracking"
-                                  element={
-                                    <ProtectedRoute allowedRoles={[ROLES.STAFF, ROLES.ADMIN]}>
-                                      <StaffTracking />
-                                    </ProtectedRoute>
-                                  }
-                                />
-                                <Route
-                                  path="/admin"
-                                  element={
-                                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                                      <AdminPanel />
-                                    </ProtectedRoute>
-                                  }
-                                />
-                                <Route path="*" element={<NotFound />} />
-                              </Routes>
-                            </Suspense>
+                            <ErrorBoundary>
+                              <Suspense fallback={<Spinner />}>
+                                <Routes>
+                                  <Route path="/" element={<Home />} />
+                                  <Route path="/hizmetler" element={<Services />} />
+                                  <Route path="/randevu-al" element={<BookAppointment />} />
+                                  <Route path="/randevularim" element={<MyAppointments />} />
+                                  <Route path="/giris" element={<Login />} />
+                                  <Route
+                                    path="/staff"
+                                    element={
+                                      <ProtectedRoute allowedRoles={[ROLES.STAFF]}>
+                                        <StaffPanel />
+                                      </ProtectedRoute>
+                                    }
+                                  />
+                                  <Route
+                                    path="/staff/tracking"
+                                    element={
+                                      <ProtectedRoute allowedRoles={[ROLES.STAFF, ROLES.ADMIN]}>
+                                        <StaffTracking />
+                                      </ProtectedRoute>
+                                    }
+                                  />
+                                  <Route
+                                    path="/admin"
+                                    element={
+                                      <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                                        <AdminPanel />
+                                      </ProtectedRoute>
+                                    }
+                                  />
+                                  <Route path="*" element={<NotFound />} />
+                                </Routes>
+                              </Suspense>
+                            </ErrorBoundary>
                           </main>
                           <Footer />
                         </div>
