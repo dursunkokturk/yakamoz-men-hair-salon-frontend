@@ -12,6 +12,7 @@ import { Button } from "../ui/Button";
 import { Calendar } from "../ui/Calendar";
 import { formatPhoneInput, isValidPhone, isValidName, normalizeName } from "../../utils/validation";
 import { formatDateTR } from "../../utils/dateUtils";
+import { errorMessage } from "../../utils/errors";
 
 export function BookAppointment() {
   const { activeServices } = useServices();
@@ -84,7 +85,7 @@ export function BookAppointment() {
       } else if (err.message === "INVALID_INPUT" || err.message === "INVALID_SERVICE") {
         toast.error("Girdiğiniz bilgiler geçersiz, lütfen kontrol edin");
       } else {
-        toast.error("Randevu oluşturulamadı, tekrar deneyin");
+        toast.error(errorMessage(err, "Randevu oluşturulamadı, tekrar deneyin"));
       }
     }
   }
